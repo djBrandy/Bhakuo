@@ -39,6 +39,12 @@ const Header = ({ currentPage, onNavigate, session }: HeaderProps) => {
             Live Bridge
           </button>
           <button 
+            className={currentPage === 'library' ? 'active' : ''} 
+            onClick={() => onNavigate('library')}
+          >
+            Library
+          </button>
+          <button 
             className={currentPage === 'settings' ? 'active' : ''} 
             onClick={() => onNavigate('settings')}
           >

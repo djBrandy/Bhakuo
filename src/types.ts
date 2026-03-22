@@ -1,1 +1,1 @@
-export type Page = 'home' | 'mentor' | 'learner' | 'settings' | 'auth' | 'live';
+export type Page = 'home' | 'mentor' | 'learner' | 'settings' | 'auth' | 'live' | 'library';

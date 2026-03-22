@@ -6,6 +6,7 @@ import Learner from './pages/Learner'
 import Settings from './pages/Settings'
 import Auth from './pages/Auth'
 import LiveSession from './pages/LiveSession'
+import Library from './pages/Library'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import './App.css'
@@ -64,6 +65,7 @@ function App() {
       case 'learner': return <Learner apiKey={apiKey} onNavigate={setCurrentPage} />
       case 'settings': return <Settings apiKey={apiKey} onSave={handleSaveApiKey} onNavigate={setCurrentPage} />
       case 'live': return <LiveSession apiKey={apiKey} onNavigate={setCurrentPage} />
+      case 'library': return <Library onNavigate={setCurrentPage} />
       default: return <Home onNavigate={setCurrentPage} />
     }
   }
