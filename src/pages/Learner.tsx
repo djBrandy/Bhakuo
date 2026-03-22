@@ -58,6 +58,33 @@ const Learner = ({ apiKey, onNavigate }: LearnerProps) => {
     )
   }
 
+  const generateLesson = async () => {
+    if (!apiKey || results.length === 0) return alert('Add some words first!')
+    setSearching(true)
+    try {
+      const wordsList = results.map(r => r.kitaveta).join(', ')
+      const prompt = `Use these Kitaveta words: ${wordsList}. Create a small, engaging lesson (3-4 sentences) for a learner. Suggest a fun practice sentence they should try to say.`
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'system', content: 'You are a wise Kitaveta teacher.' }, { role: 'user', content: prompt }]
+        })
+      })
+      const data = await response.json()
+      alert(data.choices[0].message.content)
+    } catch (err) {
+      alert('AI error building lesson.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
   return (
     <div className="page learner-page">
       <div className="learner-header">
@@ -65,6 +92,14 @@ const Learner = ({ apiKey, onNavigate }: LearnerProps) => {
         <p className="vision">Explore the community-built Kitaveta bridge.</p>
       </div>
       
+      <div className="ai-lesson-box card">
+        <h3>Today's Learning Path</h3>
+        <p className="small">The AI will build a custom lesson based on your community dictionary.</p>
+        <button className="primary-btn" onClick={generateLesson} disabled={searching}>
+          {searching ? 'Building Lesson...' : 'Start AI Guided Lesson'}
+        </button>
+      </div>
+
       <form className="search-bar-container" onSubmit={handleSearch}>
         <div className="search-input-wrapper">
           <Search size={20} className="search-icon" />

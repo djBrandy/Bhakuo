@@ -8,9 +8,17 @@ interface HeaderProps {
 }
 
 const Header = ({ currentPage, onNavigate, session }: HeaderProps) => {
+  const [userRole, setUserRole] = useState<'mentor' | 'learner'>('learner')
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     onNavigate('auth' as Page)
+  }
+
+  const toggleRole = () => {
+    const newRole = userRole === 'learner' ? 'mentor' : 'learner'
+    setUserRole(newRole)
+    onNavigate(newRole as Page)
   }
 
   return (
@@ -20,17 +28,8 @@ const Header = ({ currentPage, onNavigate, session }: HeaderProps) => {
       </div>
       {session && (
         <nav className="nav">
-          <button 
-            className={currentPage === 'mentor' ? 'active' : ''} 
-            onClick={() => onNavigate('mentor')}
-          >
-            Mentor
-          </button>
-          <button 
-            className={currentPage === 'learner' ? 'active' : ''} 
-            onClick={() => onNavigate('learner')}
-          >
-            Learner
+          <button className="role-toggle" onClick={toggleRole}>
+            Switch to {userRole === 'learner' ? 'Mentor' : 'Learner'}
           </button>
           <button 
             className={currentPage === 'live' ? 'active' : ''} 
