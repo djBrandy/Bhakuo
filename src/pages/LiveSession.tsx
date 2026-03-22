@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import type { Page } from '../types'
-import { Mic, Square, Loader2, MessageSquare, Volume2, UserCircle } from 'lucide-react'
+import { Mic, Square, Loader2, MessageSquare, Volume2 } from 'lucide-react'
 import { supabase } from '../services/supabase'
 
 interface LiveSessionProps {
@@ -8,16 +8,7 @@ interface LiveSessionProps {
   onNavigate: (page: Page) => void
 }
 
-const personas = {
-  grandfather: { name: 'Grandfather', prompt: 'A wise and patient native Kitaveta elder. Encouraging and full of wisdom.' },
-  dad: { name: 'Dad', prompt: 'Firm but encouraging father. Focus on discipline and learning. No sugarcoating.' },
-  mom: { name: 'Mom', prompt: 'Warm and nurturing mother. Focus on food, safety, and family.' },
-  cousin: { name: 'Cousin', prompt: 'Casual, fun, and direct. Uses slang and modern Kitaveta context.' },
-  stranger: { name: 'Stranger', prompt: 'A street-smart, fast-talking Kitaveta person. Direct, unfiltered, and honest.' }
-}
-
 const LiveSession = ({ apiKey, onNavigate }: LiveSessionProps) => {
-  const [selectedPersona, setSelectedPersona] = useState<keyof typeof personas>('grandfather')
   const [isListening, setIsListening] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [chatLog, setChatLog] = useState<{ role: 'user' | 'ai', text: string }[]>([])
@@ -91,11 +82,11 @@ const LiveSession = ({ apiKey, onNavigate }: LiveSessionProps) => {
           messages: [
             { 
               role: 'system', 
-              content: `You are responding as a ${personas[selectedPersona].name}. ${personas[selectedPersona].prompt} 
+              content: `You are Alexander, a wise and patient native Kitaveta elder. 
               YOUR GOAL: To bridge the gap between speakers and learners.
               1. Use Kitaveta words you are 100% sure of.
               2. If unsure, ask the user to teach you.
-              3. Maintain the specific persona's voice and attitude.` 
+              3. Maintain a warm, grandfatherly persona.` 
             },
             { role: 'user', content: userText }
           ]
@@ -134,27 +125,13 @@ const LiveSession = ({ apiKey, onNavigate }: LiveSessionProps) => {
   return (
     <div className="page live-session">
       <h1>Live Kitaveta Bridge</h1>
-      
-      <div className="persona-selector">
-        <label>Talking to:</label>
-        <div className="persona-chips">
-          {Object.keys(personas).map((key) => (
-            <button 
-              key={key}
-              className={`persona-chip ${selectedPersona === key ? 'active' : ''}`}
-              onClick={() => setSelectedPersona(key as keyof typeof personas)}
-            >
-              {personas[key as keyof typeof personas].name}
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="vision">Speak naturally. Alexander is listening and will respond in Kitaveta.</p>
 
       <div className="chat-window">
         {chatLog.length === 0 && (
           <div className="empty-state">
             <MessageSquare size={48} className="muted-icon" />
-            <p>Alexander is ready as your {personas[selectedPersona].name}. Speak now.</p>
+            <p>Alexander is ready. Speak now.</p>
           </div>
         )}
         {chatLog.map((msg, i) => (
