@@ -21,11 +21,21 @@ export const saveTranslation = async (translation: {
   audio_url?: string,
   creator_id: string
 }) => {
+  // Use upsert with onConflict to handle exact duplicates (Source + Kitaveta)
   const { data, error } = await supabase
     .from('translations')
-    .insert([translation])
+    .upsert([translation], { onConflict: 'source_word, kitaveta' })
     .select()
 
   if (error) throw error
   return data[0]
+}
+
+export const deleteTranslation = async (id: string, userId: string) => {
+  const { error } = await supabase
+    .from('translations')
+    .delete()
+    .match({ id, creator_id: userId })
+
+  if (error) throw error
 }

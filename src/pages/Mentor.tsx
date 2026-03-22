@@ -60,6 +60,35 @@ const Mentor = ({ apiKey, onNavigate }: MentorProps) => {
     }
   }
 
+  const handleAutoTranslate = async () => {
+    if (!sourceWord || !apiKey) return
+    setLoading(true)
+    try {
+      const prompt = sourceLang === 'english' 
+        ? `Translate the English word "${sourceWord}" to Swahili. Respond with ONLY the Swahili word.` 
+        : `Translate the Swahili word "${sourceWord}" to English. Respond with ONLY the English word.`
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      })
+      const data = await response.json()
+      const result = data.choices[0].message.content
+      alert(`AI Suggestion: ${result}. You can use this for reference!`)
+    } catch (err) {
+      console.error('AI error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="page mentor-page">
       <div className="mentor-header">
@@ -75,7 +104,7 @@ const Mentor = ({ apiKey, onNavigate }: MentorProps) => {
           </div>
           <div className="ai-content">
             <p className="small">The AI understands its role to suggest translations. Try asking for words about family, food, or weather.</p>
-            <button className="secondary-btn ai-btn">Ask for Suggestions</button>
+            <button className="secondary-btn ai-btn" onClick={() => alert('Feature coming: AI lesson plans!')}>Ask for Suggestions</button>
           </div>
         </section>
 
@@ -104,13 +133,18 @@ const Mentor = ({ apiKey, onNavigate }: MentorProps) => {
 
           <div className="input-field">
             <label>Word in {sourceLang.charAt(0).toUpperCase() + sourceLang.slice(1)}</label>
-            <input 
-              type="text" 
-              value={sourceWord} 
-              onChange={(e) => setSourceWord(e.target.value)} 
-              placeholder={sourceLang === 'english' ? 'e.g. Good' : 'e.g. Nzuri'} 
-              required
-            />
+            <div className="input-with-action">
+              <input 
+                type="text" 
+                value={sourceWord} 
+                onChange={(e) => setSourceWord(e.target.value)} 
+                placeholder={sourceLang === 'english' ? 'e.g. Good' : 'e.g. Nzuri'} 
+                required
+              />
+              <button type="button" className="action-btn" onClick={handleAutoTranslate} title="Get translation reference">
+                <BrainCircuit size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="input-field">

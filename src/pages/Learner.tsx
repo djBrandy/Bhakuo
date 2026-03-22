@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react'
 import type { Page } from '../types'
+import { Search, Play, Volume2, Info, Loader2 } from 'lucide-react'
+import { supabase } from '../services/supabase'
 
 interface LearnerProps {
   apiKey: string | null
@@ -6,6 +9,45 @@ interface LearnerProps {
 }
 
 const Learner = ({ apiKey, onNavigate }: LearnerProps) => {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [results, setResults] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searching, setSearching] = useState(false)
+
+  // Fetch initial scrolling list
+  useEffect(() => {
+    fetchLatest()
+  }, [])
+
+  const fetchLatest = async () => {
+    setLoading(true)
+    const { data } = await supabase
+      .from('translations')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10)
+    if (data) setResults(data)
+    setLoading(false)
+  }
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!searchTerm) return fetchLatest()
+    
+    setSearching(true)
+    const { data, error } = await supabase
+      .from('translations')
+      .select('*')
+      .or(`source_word.ilike.%${searchTerm}%,kitaveta.ilike.%${searchTerm}%`)
+    
+    if (data) setResults(data)
+    setSearching(false)
+  }
+
+  const playAudio = (url: string) => {
+    new Audio(url).play()
+  }
+
   if (!apiKey) {
     return (
       <div className="page learner-page centered">
@@ -18,18 +60,58 @@ const Learner = ({ apiKey, onNavigate }: LearnerProps) => {
 
   return (
     <div className="page learner-page">
-      <h1>Learner Mode</h1>
-      <p>Start bridging the gap by learning Kitaveta from mentors.</p>
-      
-      <div className="search-bar">
-        <input type="text" placeholder="Search for a word (English, Swahili, Kitaveta)" />
-        <button className="search-btn">Search</button>
+      <div className="learner-header">
+        <h1>Learner Mode</h1>
+        <p className="vision">Explore the community-built Kitaveta bridge.</p>
       </div>
+      
+      <form className="search-bar-container" onSubmit={handleSearch}>
+        <div className="search-input-wrapper">
+          <Search size={20} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="Search for a word (e.g. Good or Chedi)" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <button className="primary-btn search-btn" type="submit" disabled={searching}>
+          {searching ? <Loader2 className="spin" size={20} /> : 'Search'}
+        </button>
+      </form>
 
-      <div className="ai-box">
-        <h3>AI Learning Guide</h3>
-        <p>Ask the AI what words you should prioritize today!</p>
-        <button className="secondary-btn">Get Recommendations</button>
+      <div className="dictionary-feed">
+        <div className="feed-header">
+          <h3>{searchTerm ? 'Search Results' : 'Latest Contributions'}</h3>
+          <span className="count">{results.length} words found</span>
+        </div>
+
+        <div className="results-grid">
+          {results.map((p) => (
+            <div key={p.id} className="phrase-card">
+              <div className="phrase-meta">
+                <span className="source-lang">{p.source_language}</span>
+                <h3>{p.source_word}</h3>
+              </div>
+              <div className="phrase-target">
+                <span className="kitaveta-label">Kitaveta</span>
+                <p className="kitaveta-word">{p.kitaveta}</p>
+              </div>
+              {p.audio_url && (
+                <button className="play-btn-circle" onClick={() => playAudio(p.audio_url)}>
+                  <Volume2 size={20} />
+                </button>
+              )}
+            </div>
+          ))}
+
+          {results.length === 0 && !loading && (
+            <div className="empty-state">
+              <Info size={48} />
+              <p>No results found for "{searchTerm}".</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
