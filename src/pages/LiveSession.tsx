@@ -101,10 +101,25 @@ const LiveSession = ({ apiKey, onNavigate }: LiveSessionProps) => {
 
       setChatLog(prev => [...prev, { role: 'ai', text: aiText }])
       
-      // 3. Simple TTS (Browser built-in)
-      const utterance = new SpeechSynthesisUtterance(aiText)
-      utterance.lang = 'sw-KE' // Closest phonetic match for browser TTS
-      window.speechSynthesis.speak(utterance)
+      // 3. Search & Play Logic: Look for authentic mentor recordings in the AI response
+      const words = aiText.split(/[\s,?.!]+/)
+      for (const word of words) {
+        if (word.length < 3) continue // Skip short particles
+        
+        const { data } = await supabase
+          .from('translations')
+          .select('audio_url')
+          .ilike('kitaveta', `%${word}%`)
+          .not('audio_url', 'is', null)
+          .limit(1)
+
+        if (data && data.length > 0) {
+          const audio = new Audio(data[0].audio_url)
+          audio.play()
+          // Small delay to prevent overlapping audio if multiple words match
+          await new Promise(resolve => setTimeout(resolve, 1500))
+        }
+      }
 
     } catch (err) {
       console.error(err)
