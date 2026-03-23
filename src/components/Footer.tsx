@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Page } from '../types'
 
 interface FooterProps {
@@ -5,6 +6,14 @@ interface FooterProps {
 }
 
 const Footer = ({ onNavigate }: FooterProps) => {
+  const [copied, setCopied] = useState(false)
+
+  const copy = () => {
+    navigator.clipboard.writeText('0112607179')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <footer className="footer">
       <div className="footer-inner">
@@ -14,7 +23,7 @@ const Footer = ({ onNavigate }: FooterProps) => {
             An open-source platform built to preserve the Kitaveta language — spoken by the Kitaveta people of Kenya.
             Native mentors contribute verified words and phrases. Alexander, the AI, teaches only what the mentors have confirmed.
             No hallucinations. No guessing. Just truth, passed down.
-            Named after <em>"Bhakuo"</em>.
+            Named after <em>Bhakuo</em>.
           </p>
         </div>
 
@@ -26,18 +35,10 @@ const Footer = ({ onNavigate }: FooterProps) => {
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home') }}>
             About
           </a>
-        </div>
-
-        <div className="footer-support">
-          <p>Built with care by <strong>Brandon</strong>. If this project means something to you, consider supporting its development.</p>
-          <a
-            href="https://buymeacoffee.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="support-link"
-          >
-            ☕ Support Brandon
-          </a>
+          <span className="footer-dot">·</span>
+          <button className="footer-support-inline" onClick={copy}>
+            {copied ? '✓ Copied' : 'Support Brandon'}
+          </button>
         </div>
 
         <p className="footer-copy">© {new Date().getFullYear()} Project Alexander · Open Source · MIT License</p>

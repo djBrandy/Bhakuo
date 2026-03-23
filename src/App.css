@@ -1766,3 +1766,16 @@ body {
   font-size: 0.85rem;
   margin: 0;
 }
+
+.footer-support-inline {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.footer-support-inline:hover { color: var(--text); }
