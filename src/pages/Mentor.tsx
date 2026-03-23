@@ -29,18 +29,27 @@ For VOCABULARY (nouns, adjectives, verbs, standalone words) — only collect:
 3. Swahili equivalent (or null)
 Skip fields 4–7 entirely and set them to null. Do NOT ask about expected response, audience, time of day, or social context for plain vocabulary words.
 
-Once you have the relevant fields, do the following before saving:
-STEP A — Ask: "Is there anything else I should know about this before we save it? Any pronunciation tips, notes, or exceptions?"
-STEP B — Do a verification recap in your own words. For vocabulary: "So 'Imbuji' means 'goat' / 'mbuzi'. Is that correct?" For greetings: include audience, time, context, and expected response.
-STEP C — For GREETINGS ONLY: after confirmation, do a short practice exchange. Say: "Just to confirm I've got its essence — let's do a quick practice: [kitaveta phrase]?" Wait for the mentor's reply, acknowledge it warmly with a brief translation, then output the JSON. For VOCABULARY: skip STEP C and output the JSON immediately after the mentor confirms the recap.
+Once you have the relevant fields, follow these steps IN ORDER — do not skip or combine steps:
+
+STEP A — Ask EXACTLY this (nothing more): "Is there anything else I should know before we save it? Any pronunciation tips, notes, or exceptions?"
+Wait for the mentor's reply before moving to STEP B.
+
+STEP B — After the mentor replies to STEP A, do a verification recap in your own words and ask "Is that correct?".
+- For vocabulary: "So '[kitaveta]' means '[english]' / '[swahili]'. Is that correct?"
+- For greetings: "Let me make sure I have this right: '[kitaveta]' means '[english]' / '[swahili]', used [time_of_day] by [audience], response is '[expected_response]'. [social_context if any]. Is that correct?"
+Wait for the mentor to confirm before moving to STEP C.
+
+STEP C:
+- For VOCABULARY: output the JSON immediately.
+- For GREETINGS: do a short practice exchange first. Say: "Just to confirm I've got its essence — quick practice: [kitaveta]?" Wait for the mentor's reply. Acknowledge it warmly with a brief translation (e.g. "[reply] — [meaning]. Got it!"), then output the JSON.
 
 RULES:
 - Ask exactly ONE question at a time. Never bundle multiple questions.
-- Read the FULL conversation history carefully. NEVER ask for something already provided in this conversation.
+- Read the FULL conversation history carefully. NEVER ask for something already provided.
 - Be warm, curious, and eager — like a student who genuinely wants to understand deeply.
-- When outputting the entry, respond with ONLY a raw JSON object, no text before or after:
+- When outputting the JSON, output ONLY the raw JSON — no text before or after it:
 {"kitaveta": "...", "english": "...", "swahili": "...", "expected_response": "...", "audience": "anyone|elder|peer|child", "time_of_day": "anytime|morning|afternoon|evening", "social_context": "...", "pronunciation": "...", "notes": "..."}
-Use null for any field the mentor confirmed is not applicable.
+- Use null (not the string "none") for any field that is not applicable.
 - After a save is confirmed, ask: "What OTHER word or phrase should we add?" — never repeat a word already discussed in this conversation.`
 
 const Mentor = ({ profile, onNavigate }: MentorProps) => {
@@ -178,6 +187,8 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     }
   }
 
+  const clean = (v: any) => (!v || v === 'none' || v === 'null') ? null : v
+
   const saveToDatabase = async () => {
     if (!pendingEntry || !profile) return
     setIsProcessing(true)
@@ -187,14 +198,14 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
         .insert([{
           kitaveta: pendingEntry.kitaveta,
           english: pendingEntry.english,
-          swahili: pendingEntry.swahili,
-          context: pendingEntry.social_context,
-          expected_response: (pendingEntry as any).expected_response ?? null,
-          pronunciation: (pendingEntry as any).pronunciation ?? null,
-          notes: (pendingEntry as any).notes ?? null,
+          swahili: clean(pendingEntry.swahili),
+          context: clean(pendingEntry.social_context),
+          expected_response: clean((pendingEntry as any).expected_response),
+          pronunciation: clean((pendingEntry as any).pronunciation),
+          notes: clean((pendingEntry as any).notes),
           formality: 'neutral',
-          audience: (pendingEntry as any).audience ?? 'anyone',
-          time_of_day: (pendingEntry as any).time_of_day ?? 'anytime',
+          audience: clean((pendingEntry as any).audience) ?? 'anyone',
+          time_of_day: clean((pendingEntry as any).time_of_day) ?? 'anytime',
           category: 'greetings',
           contributor_id: profile.id,
           audio_url: ''
@@ -283,19 +294,19 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
                   <span className="pill-value">{(pendingEntry as any).expected_response}</span>
                 </div>
               )}
-              {(pendingEntry as any).pronunciation && (
+              {(pendingEntry as any).pronunciation && (pendingEntry as any).pronunciation !== 'null' && (pendingEntry as any).pronunciation !== 'none' && (
                 <div className="translation-pill">
                   <span className="pill-lang">PR</span>
                   <span className="pill-value">{(pendingEntry as any).pronunciation}</span>
                 </div>
               )}
-              {pendingEntry.social_context && (
+              {pendingEntry.social_context && pendingEntry.social_context !== 'null' && pendingEntry.social_context !== 'none' && (
                 <div className="translation-pill context">
                   <span className="pill-lang">CTX</span>
                   <span className="pill-value">{pendingEntry.social_context}</span>
                 </div>
               )}
-              {(pendingEntry as any).notes && (
+              {(pendingEntry as any).notes && (pendingEntry as any).notes !== 'null' && (pendingEntry as any).notes !== 'none' && (
                 <div className="translation-pill context">
                   <span className="pill-lang">NOTE</span>
                   <span className="pill-value">{(pendingEntry as any).notes}</span>
