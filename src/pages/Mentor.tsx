@@ -110,9 +110,15 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
 
       const aiText = await askGroq(history)
 
-      if (aiText.startsWith('{')) {
-        const structured = JSON.parse(aiText)
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const structured = JSON.parse(jsonMatch[0])
         setPendingEntry(structured)
+        const preText = aiText.slice(0, jsonMatch.index).trim()
+        if (preText) {
+          setMessages(prev => [...prev, { role: 'ai', text: preText }])
+          await saveChatMessage(profile.id, 'ai', preText, 'mentor').catch(() => {})
+        }
         const confirmMsg = `I've prepared the entry for "${structured.kitaveta}". Does this look correct? If so, save it.`
         setMessages(prev => [...prev, { role: 'ai', text: confirmMsg }])
         await saveChatMessage(profile.id, 'ai', confirmMsg, 'mentor').catch(() => {})
