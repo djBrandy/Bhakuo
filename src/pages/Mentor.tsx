@@ -197,6 +197,28 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     }
   }
 
+  const clean = (v: any) => (!v || v === 'none' || v === 'null') ? null : v
+
+  const normalizeAudience = (v: any): string => {
+    if (!v || v === 'none' || v === 'null') return 'anyone'
+    const s = String(v).toLowerCase()
+    if (s === 'elder' || s === 'peer' || s === 'child' || s === 'anyone') return s
+    if (s.includes('elder') || s.includes('grand') || s.includes('old')) return 'elder'
+    if (s.includes('child') || s.includes('kid')) return 'child'
+    if (s.includes('peer') || s.includes('friend') || s.includes('young') || s.includes('boy') || s.includes('girl')) return 'peer'
+    return 'anyone'
+  }
+
+  const normalizeTimeOfDay = (v: any): string => {
+    if (!v || v === 'none' || v === 'null') return 'anytime'
+    const s = String(v).toLowerCase()
+    if (s === 'morning' || s === 'afternoon' || s === 'evening' || s === 'anytime') return s
+    if (s.includes('morning')) return 'morning'
+    if (s.includes('afternoon')) return 'afternoon'
+    if (s.includes('evening') || s.includes('night')) return 'evening'
+    return 'anytime'
+  }
+
   const saveToDatabase = async () => {
     if (!pendingEntry || !profile) return
     setIsProcessing(true)
@@ -212,8 +234,8 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
           pronunciation: (pendingEntry as any).pronunciation ?? null,
           notes: (pendingEntry as any).notes ?? null,
           formality: 'neutral',
-          audience: (pendingEntry as any).audience ?? 'anyone',
-          time_of_day: (pendingEntry as any).time_of_day ?? 'anytime',
+          audience: normalizeAudience((pendingEntry as any).audience),
+          time_of_day: normalizeTimeOfDay((pendingEntry as any).time_of_day),
           category: 'greetings',
           contributor_id: profile.id,
           is_verified: true,
