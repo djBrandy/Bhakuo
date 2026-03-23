@@ -23,9 +23,12 @@ const Auth = ({ onSuccess }: AuthProps) => {
       if (isSignUp) {
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
         if (signUpError) throw signUpError
-        
-        // Create a profile for the new user with selected role
+
         if (data.user) {
+          // Sign in immediately to get an active session for RLS
+          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+          if (signInError) throw signInError
+
           const { error: profileError } = await supabase
             .from('profiles')
             .insert([{
@@ -34,11 +37,12 @@ const Auth = ({ onSuccess }: AuthProps) => {
               role: userRole,
               created_at: new Date().toISOString()
             }])
-          
+
           if (profileError) throw profileError
+          onSuccess()
+        } else {
+          alert('Check your email for the confirmation link!')
         }
-        
-        alert('Check your email for the confirmation link!')
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) throw signInError
