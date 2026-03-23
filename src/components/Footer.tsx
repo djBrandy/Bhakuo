@@ -36,8 +36,8 @@ const Footer = ({ onNavigate }: FooterProps) => {
             About
           </a>
           <span className="footer-dot">·</span>
-          <button className="footer-support-inline" onClick={copy}>
-            {copied ? '✓ Copied' : 'Support Brandon'}
+          <button className="footer-support-inline" onClick={copy} title="M-Pesa: 0112607179">
+            {copied ? '✓ 0112607179 copied' : 'Support this project via M-Pesa'}
           </button>
         </div>
 
