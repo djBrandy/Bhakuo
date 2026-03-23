@@ -17,6 +17,7 @@ interface ChatInterfaceProps {
   headerSubtitle?: string
   showTypingIndicator?: boolean
   onBack?: () => void
+  extraAction?: React.ReactNode
 }
 
 const ChatInterface = ({
@@ -27,7 +28,8 @@ const ChatInterface = ({
   headerTitle = "Chat",
   headerSubtitle,
   showTypingIndicator = false,
-  onBack
+  onBack,
+  extraAction
 }: ChatInterfaceProps) => {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -65,6 +67,7 @@ const ChatInterface = ({
           <h2 className="header-title">{headerTitle}</h2>
           {headerSubtitle && <p className="header-subtitle">{headerSubtitle}</p>}
         </div>
+        {extraAction && <div className="header-extra">{extraAction}</div>}
       </div>
 
       {/* Chat Messages Container */}

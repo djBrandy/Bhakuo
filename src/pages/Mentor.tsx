@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Page, Profile, Knowledge } from '../types'
-import { ShieldAlert, Save, X } from 'lucide-react'
+import { ShieldAlert, Save, X, Sparkles } from 'lucide-react'
 import { supabase } from '../services/supabase'
+import { getSyllabus, getChatMessages, saveChatMessage } from '../services/database'
 import ChatInterface from '../components/ChatInterface'
 
 interface MentorProps {
@@ -10,12 +11,34 @@ interface MentorProps {
 }
 
 const Mentor = ({ profile, onNavigate }: MentorProps) => {
-  const [messages, setMessages] = useState<{ role: 'ai' | 'user'; text: string }[]>([
-    { role: 'ai', text: `Washindaze? What word or phrase are we teaching to preserve our roots?` }
-  ])
+  const [messages, setMessages] = useState<{ role: 'ai' | 'user'; text: string }[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [pendingEntry, setPendingEntry] = useState<Partial<Knowledge> | null>(null)
-  const [audioBlob] = useState<Blob | null>(null)
+
+  useEffect(() => {
+    if (!profile?.id) { setLoading(false); return }
+    initChat()
+  }, [profile?.id])
+
+  const initChat = async () => {
+    setLoading(true)
+    try {
+      const history = await getChatMessages(profile!.id, 'mentor')
+      if (history.length > 0) {
+        setMessages(history)
+      } else {
+        const greeting = { role: 'ai' as const, text: `Washindaze? What word or phrase are we teaching to preserve our roots?` }
+        setMessages([greeting])
+        await saveChatMessage(profile!.id, 'ai', greeting.text, 'mentor').catch(() => {})
+      }
+    } catch (err) {
+      console.error(err)
+      setMessages([{ role: 'ai', text: `Washindaze? What word or phrase are we teaching to preserve our roots?` }])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (profile?.role !== 'mentor' && profile?.role !== 'pending_mentor') {
     return (
@@ -36,6 +59,8 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     setMessages(updatedMessages)
     setIsProcessing(true)
 
+    await saveChatMessage(profile.id, 'user', userText, 'mentor').catch(() => {})
+
     try {
       const history = updatedMessages.map(m => ({
         role: m.role === 'ai' ? 'assistant' : 'user',
@@ -53,14 +78,7 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
           messages: [
             {
               role: 'system',
-              content: `You are Alexander's Knowledge Assistant helping a Kitaveta mentor document language knowledge.
-Read the full conversation to understand what has been shared so far.
-
-- If you have enough to identify the Kitaveta word/phrase AND at least one translation, extract the entry as a raw JSON object in this exact format (no extra text):
-{"kitaveta": "...", "english": "...", "swahili": "...", "social_context": "..."}
-Use null for any field not provided.
-
-- If you do NOT have enough info yet, reply conversationally in plain text asking for what is missing.`
+              content: `You are Alexander's Knowledge Assistant helping a Kitaveta mentor document language knowledge.\nRead the full conversation to understand what has been shared so far.\n\n- If you have enough to identify the Kitaveta word/phrase AND at least one translation, extract the entry as a raw JSON object in this exact format (no extra text):\n{"kitaveta": "...", "english": "...", "swahili": "...", "social_context": "..."}\nUse null for any field not provided.\n\n- If you do NOT have enough info yet, reply conversationally in plain text asking for what is missing.`
             },
             ...history
           ]
@@ -73,15 +91,45 @@ Use null for any field not provided.
       if (aiText.startsWith('{')) {
         const structured = JSON.parse(aiText)
         setPendingEntry(structured)
-        setMessages(prev => [...prev, {
-          role: 'ai',
-          text: `I've prepared the entry for "${structured.kitaveta}". Does this look correct? If so, save it.`
-        }])
+        const confirmMsg = `I've prepared the entry for "${structured.kitaveta}". Does this look correct? If so, save it.`
+        setMessages(prev => [...prev, { role: 'ai', text: confirmMsg }])
+        await saveChatMessage(profile.id, 'ai', confirmMsg, 'mentor').catch(() => {})
       } else {
         setMessages(prev => [...prev, { role: 'ai', text: aiText }])
+        await saveChatMessage(profile.id, 'ai', aiText, 'mentor').catch(() => {})
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', text: "I had a moment of confusion. Could you repeat that or provide more context?" }])
+      const errMsg = "I had a moment of confusion. Could you repeat that or provide more context?"
+      setMessages(prev => [...prev, { role: 'ai', text: errMsg }])
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleGuideMe = async () => {
+    if (isProcessing) return
+    setIsProcessing(true)
+    try {
+      const [syllabus, knowledgeRes] = await Promise.all([
+        getSyllabus(),
+        supabase.from('knowledge').select('category, english').eq('is_verified', true)
+      ])
+
+      const coveredCategories = new Set(
+        (knowledgeRes.data ?? []).map((k: any) => k.category)
+      )
+
+      const gap = syllabus.find((l: any) => !coveredCategories.has(l.category))
+
+      const question = gap
+        ? `For the lesson "${gap.title}" — how do we say "${gap.category}" in Kitaveta?`
+        : `The knowledge base is looking good! Is there anything you'd like to add or correct?`
+
+      setMessages(prev => [...prev, { role: 'ai', text: question }])
+      await saveChatMessage(profile!.id, 'ai', question, 'mentor').catch(() => {})
+    } catch (err) {
+      const fallback = "What Kitaveta word or phrase shall we add today?"
+      setMessages(prev => [...prev, { role: 'ai', text: fallback }])
     } finally {
       setIsProcessing(false)
     }
@@ -91,8 +139,6 @@ Use null for any field not provided.
     if (!pendingEntry || !profile) return
     setIsProcessing(true)
     try {
-      const audio_url = ''
-
       const { error } = await supabase
         .from('knowledge')
         .insert([{
@@ -100,17 +146,19 @@ Use null for any field not provided.
           english: pendingEntry.english,
           swahili: pendingEntry.swahili,
           context: pendingEntry.social_context,
-          category: 'general', // Default category
+          category: 'general',
           formality: 'neutral',
           audience: 'anyone',
           time_of_day: 'anytime',
           contributor_id: profile.id,
-          audio_url
+          audio_url: ''
         }])
 
       if (error) throw error
-      
-      setMessages(prev => [...prev, { role: 'ai', text: "Success! That knowledge is now part of the bridge. What else shall we teach?" }])
+
+      const successMsg = `"${pendingEntry.kitaveta}" is now part of the bridge. What else shall we teach?`
+      setMessages(prev => [...prev, { role: 'ai', text: successMsg }])
+      await saveChatMessage(profile.id, 'ai', successMsg, 'mentor').catch(() => {})
       setPendingEntry(null)
     } catch (err: any) {
       alert(err.message)
@@ -125,10 +173,15 @@ Use null for any field not provided.
         <ChatInterface
           messages={messages}
           onSendMessage={handleChat}
-          loading={isProcessing && !pendingEntry}
+          loading={loading || (isProcessing && !pendingEntry)}
           placeholder="Tell me about a Kitaveta word or phrase..."
           headerTitle="Mentor Panel"
           headerSubtitle="Contribute to the bridge"
+          extraAction={
+            <button className="guide-me-btn" onClick={handleGuideMe} disabled={isProcessing}>
+              <Sparkles size={15} /> Guide me
+            </button>
+          }
         />
       </div>
 

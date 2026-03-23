@@ -43,6 +43,35 @@
   flex: 1;
 }
 
+.header-extra {
+  flex-shrink: 0;
+}
+
+.guide-me-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.4rem 0.85rem;
+  border-radius: 2rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.guide-me-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.guide-me-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .header-title {
   margin: 0;
   font-size: 1.1rem;

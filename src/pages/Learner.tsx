@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import type { Page, Profile, SyllabusLesson, KnowledgeEntry, ChatMessage } from '../types'
-import { getSyllabus, getKnowledgeForLesson, upsertProgress, queueKnowledgeGap } from '../services/database'
-import { BookOpen, ChevronRight } from 'lucide-react'
+import type { Page, Profile, ChatMessage } from '../types'
+import { getSyllabus, getLearnerProgress, getChatMessages, saveChatMessage, queueKnowledgeGap } from '../services/database'
+import { BookOpen } from 'lucide-react'
 import ChatInterface from '../components/ChatInterface'
 
 interface LearnerProps {
@@ -11,79 +11,73 @@ interface LearnerProps {
 }
 
 const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
-  const [syllabus, setSyllabus] = useState<SyllabusLesson[]>([])
-  const [activeLesson, setActiveLesson] = useState<SyllabusLesson | null>(null)
-  const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [thinking, setThinking] = useState(false)
-  const [loadingLesson, setLoadingLesson] = useState(false)
-  const [view, setView] = useState<'syllabus' | 'lesson'>('syllabus')
+  const [loading, setLoading] = useState(true)
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there'
 
   useEffect(() => {
-    getSyllabus().then(setSyllabus).catch(console.error)
-  }, [])
+    if (!profile?.id || !apiKey) { setLoading(false); return }
+    initChat()
+  }, [profile?.id])
 
-  if (!apiKey) {
-    return (
-      <div className="page centered">
-        <div className="empty-card">
-          <BookOpen size={40} className="muted-icon" />
-          <h2>API Key Required</h2>
-          <p>Enter your Groq API key in settings to start learning.</p>
-          <button className="primary-btn" onClick={() => onNavigate('settings')}>Go to Settings</button>
-        </div>
-      </div>
-    )
+  const initChat = async () => {
+    setLoading(true)
+    try {
+      const history = await getChatMessages(profile!.id, 'learner')
+      if (history.length > 0) {
+        setMessages(history)
+      } else {
+        // First time — Alexander opens the conversation
+        await startFreshChat()
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const startLesson = async (lesson: SyllabusLesson) => {
-    setLoadingLesson(true)
-    setActiveLesson(lesson)
-    setMessages([])
-    setView('lesson')
+  const buildSystemPrompt = async () => {
+    const [syllabus, progress] = await Promise.all([
+      getSyllabus(),
+      getLearnerProgress(profile!.id)
+    ])
 
-    try {
-      const entries = await getKnowledgeForLesson(lesson.knowledge_ids)
-      setKnowledge(entries)
+    const completedIds = new Set(
+      progress.filter((p: any) => p.status === 'completed').map((p: any) => p.syllabus_id)
+    )
+    const inProgressIds = new Set(
+      progress.filter((p: any) => p.status === 'in_progress').map((p: any) => p.syllabus_id)
+    )
 
-      if (profile?.id) {
-        await upsertProgress({
-          learner_id: profile.id,
-          syllabus_id: lesson.id,
-          status: 'in_progress',
-        })
-      }
+    const syllabusContext = syllabus.map((l: any) => {
+      const status = completedIds.has(l.id) ? '✓ completed' : inProgressIds.has(l.id) ? '→ in progress' : 'not started'
+      return `- Lesson ${l.lesson_number} (Unit ${l.unit}): "${l.title}" [${status}]`
+    }).join('\n')
 
-      // Build grounded system context from verified DB entries
-      const knowledgeBlock = entries.length > 0
-        ? entries.map(e =>
-            `- Kitaveta: "${e.kitaveta}" | English: "${e.english ?? '—'}" | Swahili: "${e.swahili ?? '—'}"` +
-            (e.context ? ` | Context: ${e.context}` : '') +
-            (e.expected_response ? ` | Response: "${e.expected_response}"` : '') +
-            (e.formality !== 'neutral' ? ` | Formality: ${e.formality}` : '') +
-            (e.audience !== 'anyone' ? ` | Audience: ${e.audience}` : '') +
-            (e.time_of_day !== 'anytime' ? ` | Time: ${e.time_of_day}` : '')
-          ).join('\n')
-        : 'No verified knowledge has been added to this lesson yet.'
+    return `You are Alexander, a warm and patient Kitaveta language tutor in a continuous one-on-one conversation with ${firstName}.
 
-      const systemPrompt = `You are Alexander, a warm and patient Kitaveta language tutor.
-You are teaching ${firstName} the lesson: "${lesson.title}".
+CRITICAL RULES:
+- You may ONLY teach Kitaveta words/phrases that exist in the verified knowledge base (fetched per lesson). Never invent or guess Kitaveta.
+- If ${firstName} asks something you cannot verify, say: "I don't have that verified yet — I've asked the mentors to fill that gap for us."
+- This is a continuous conversation — never reset or re-introduce yourself unless it is truly the first message.
+- Pick up naturally from where you left off.
 
-CRITICAL RULE: You may ONLY use the verified knowledge below. Do NOT invent, guess, or hallucinate any Kitaveta words or phrases. If something is not in the knowledge base, say exactly: "I don't have that verified yet — I've asked the mentors to fill that gap for us."
-
-VERIFIED KNOWLEDGE FOR THIS LESSON:
-${knowledgeBlock}
+SYLLABUS FRAMEWORK (use this to guide what to teach next — it can expand):
+${syllabusContext}
 
 TEACHING APPROACH:
-1. Greet ${firstName} warmly by name in English, then introduce the lesson topic.
-2. Teach one knowledge entry at a time — say the Kitaveta phrase, explain its meaning and context.
-3. After teaching 2–3 entries, move to a quiz: say the Kitaveta phrase and wait for ${firstName} to respond with the meaning, OR give the English/Swahili and ask for the Kitaveta.
-4. Affirm correct answers warmly. Gently correct wrong ones and try again.
-5. Keep responses concise — this is a mobile conversation, not an essay.
-6. If ${firstName} asks something you don't have in the knowledge base, log it as a gap and say you've asked the mentors.`
+- Follow the syllabus order loosely — complete earlier lessons before moving to later ones.
+- Teach conversationally: introduce a word/phrase, explain it, use it in context, then quiz ${firstName}.
+- Keep responses short and mobile-friendly.
+- If ${firstName} wants to jump to a topic, accommodate them.
+- After completing a topic area, naturally transition to the next.`
+  }
 
-      // Start the lesson with the AI's opening message
+  const startFreshChat = async () => {
+    try {
+      const systemPrompt = await buildSystemPrompt()
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -91,44 +85,32 @@ TEACHING APPROACH:
           model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: 'Start the lesson.' }
+            { role: 'user', content: 'Begin.' }
           ]
         })
       })
       const data = await res.json()
-      const aiText = data.choices[0].message.content
-      setMessages([{ role: 'ai', text: aiText }])
+      const aiText: string = data.choices[0].message.content
+      const aiMsg: ChatMessage = { role: 'ai', text: aiText }
+      setMessages([aiMsg])
+      await saveChatMessage(profile!.id, 'ai', aiText, 'learner')
     } catch (err) {
       console.error(err)
-      setMessages([{ role: 'ai', text: 'Something went wrong starting the lesson. Please try again.' }])
-    } finally {
-      setLoadingLesson(false)
     }
   }
 
   const sendMessage = async (input: string) => {
-    if (!input.trim() || thinking || !activeLesson || !apiKey) return
+    if (!input.trim() || thinking || !apiKey || !profile?.id) return
     const userText = input.trim()
-    const updatedMessages: ChatMessage[] = [...messages, { role: 'user', text: userText }]
+    const userMsg: ChatMessage = { role: 'user', text: userText }
+    const updatedMessages = [...messages, userMsg]
     setMessages(updatedMessages)
     setThinking(true)
 
+    await saveChatMessage(profile.id, 'user', userText, 'learner').catch(() => {})
+
     try {
-      const knowledgeBlock = knowledge.length > 0
-        ? knowledge.map(e =>
-            `- Kitaveta: "${e.kitaveta}" | English: "${e.english ?? '—'}" | Swahili: "${e.swahili ?? '—'}"` +
-            (e.context ? ` | Context: ${e.context}` : '') +
-            (e.expected_response ? ` | Response: "${e.expected_response}"` : '')
-          ).join('\n')
-        : 'No verified knowledge available.'
-
-      const systemPrompt = `You are Alexander, a warm Kitaveta tutor teaching ${firstName} the lesson "${activeLesson.title}".
-CRITICAL: Only use the verified knowledge below. Never hallucinate Kitaveta words.
-If you don't know something, say: "I don't have that verified yet — I've asked the mentors."
-
-VERIFIED KNOWLEDGE:
-${knowledgeBlock}`
-
+      const systemPrompt = await buildSystemPrompt()
       const groqMessages = [
         { role: 'system', content: systemPrompt },
         ...updatedMessages.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text }))
@@ -143,22 +125,11 @@ ${knowledgeBlock}`
       const aiText: string = data.choices[0].message.content
 
       setMessages(prev => [...prev, { role: 'ai', text: aiText }])
+      await saveChatMessage(profile.id, 'ai', aiText, 'learner').catch(() => {})
 
-      // If AI flagged a gap, queue it
       if (aiText.includes("don't have that verified")) {
-        await queueKnowledgeGap(userText, undefined, activeLesson.category).catch(() => {})
+        await queueKnowledgeGap(userText, firstName).catch(() => {})
       }
-
-      // Play audio if a known kitaveta word appears in the response
-      // Feature coming soon - audio playback temporarily disabled
-      /*
-      for (const entry of knowledge) {
-        if (entry.audio_url && aiText.toLowerCase().includes(entry.kitaveta.toLowerCase())) {
-          new Audio(entry.audio_url).play()
-          break
-        }
-      }
-      */
     } catch (err) {
       console.error(err)
       setMessages(prev => [...prev, { role: 'ai', text: 'Something went wrong. Please try again.' }])
@@ -167,60 +138,29 @@ ${knowledgeBlock}`
     }
   }
 
-  // ── Syllabus view ─────────────────────────────────────────
-  if (view === 'syllabus') {
-    const units = [...new Set(syllabus.map(l => l.unit))].sort()
-
+  if (!apiKey) {
     return (
-      <div className="page learner-page">
-        <div className="page-header">
-          <h1>Welcome, {firstName}</h1>
-          <p className="vision">Choose a lesson to begin your Kitaveta journey.</p>
+      <div className="page centered">
+        <div className="empty-card">
+          <BookOpen size={40} className="muted-icon" />
+          <h2>API Key Required</h2>
+          <p>Enter your Groq API key in settings to start learning.</p>
+          <button className="primary-btn" onClick={() => onNavigate('settings')}>Go to Settings</button>
         </div>
-
-        {syllabus.length === 0 ? (
-          <div className="empty-card" style={{ margin: '0 auto' }}>
-            <BookOpen size={36} className="muted-icon" />
-            <p>The syllabus is loading or has not been set up yet.</p>
-          </div>
-        ) : (
-          units.map(unit => (
-            <div key={unit} className="unit-section">
-              <div className="unit-label">
-                Unit {unit} — {['Foundations', 'People & Relationships', 'Daily Life', 'Language Structure', 'Culture & Fluency'][unit - 1] ?? `Unit ${unit}`}
-              </div>
-              <div className="lesson-list">
-                {syllabus.filter(l => l.unit === unit).map(lesson => (
-                  <button
-                    key={lesson.id}
-                    className="lesson-row"
-                    onClick={() => startLesson(lesson)}
-                  >
-                    <span className="lesson-num">{lesson.lesson_number}</span>
-                    <span className="lesson-title">{lesson.title}</span>
-                    <ChevronRight size={16} className="muted-icon" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
       </div>
     )
   }
 
-  // ── Lesson / chat view ────────────────────────────────────
   return (
     <div className="page lesson-page">
       <ChatInterface
         messages={messages}
         onSendMessage={sendMessage}
-        loading={loadingLesson}
-        placeholder="Type your response..."
-        headerTitle={activeLesson?.title || 'Lesson'}
-        headerSubtitle={knowledge.length > 0 ? `${knowledge.length} words` : undefined}
+        loading={loading}
+        placeholder="Talk to Alexander..."
+        headerTitle="Alexander"
+        headerSubtitle="Your Kitaveta tutor"
         showTypingIndicator={thinking}
-        onBack={() => setView('syllabus')}
       />
     </div>
   )

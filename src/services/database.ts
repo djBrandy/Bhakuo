@@ -223,7 +223,7 @@ export const saveChatMessage = async (userId: string, role: 'user' | 'ai', text:
 
 // ── Knowledge Queue ───────────────────────────────────────────
 
-export const queueKnowledgeGap = async (question: string, aiAttempt?: string, suggestedCategory?: string) => {
+export const queueKnowledgeGap = async (question: string, learnerName: string, aiAttempt?: string, suggestedCategory?: string) => {
   const { data: { user } } = await supabase.auth.getUser()
   const { error } = await supabase
     .from('knowledge_queue')
@@ -234,6 +234,24 @@ export const queueKnowledgeGap = async (question: string, aiAttempt?: string, su
       suggested_category: suggestedCategory
     }])
   if (error) throw error
+
+  // Post a visible notification into every mentor's chat
+  const { data: mentors } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('role', 'mentor')
+
+  if (mentors && mentors.length > 0) {
+    const notification = `📌 ${learnerName} asked: "${question}" — how do we say this in Kitaveta?`
+    await supabase.from('chat_messages').insert(
+      mentors.map((m: { id: string }) => ({
+        user_id: m.id,
+        role: 'ai',
+        text: notification,
+        context: 'mentor'
+      }))
+    )
+  }
 }
 
 export const getOpenQueue = async () => {
