@@ -208,6 +208,7 @@ QUIZ RULES — NON-NEGOTIABLE:
   const startFreshChat = async () => {
     try {
       const systemPrompt = await buildSystemPrompt()
+      const openingInstruction = `Greet ${firstName} warmly and personally by name. Then immediately teach them the very first Kitaveta word or greeting from the knowledge base — say it, explain what it means, give a tiny bit of cultural context if available, then ask them to try using it or responding to it. Do not wait for them to ask. Pull them straight into the lesson. Keep it short, warm, and exciting — like meeting a wise relative for the first time.`
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -215,7 +216,7 @@ QUIZ RULES — NON-NEGOTIABLE:
           model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: 'Begin.' }
+            { role: 'user', content: openingInstruction }
           ]
         })
       })
