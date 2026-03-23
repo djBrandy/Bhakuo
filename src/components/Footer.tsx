@@ -14,7 +14,7 @@ const Footer = ({ onNavigate }: FooterProps) => {
             An open-source platform built to preserve the Kitaveta language — spoken by the Kitaveta people of Kenya.
             Native mentors contribute verified words and phrases. Alexander, the AI, teaches only what the mentors have confirmed.
             No hallucinations. No guessing. Just truth, passed down.
-            Named after the creator's grandfather — <em>"Bhakuo"</em>.
+            Named after <em>"Bhakuo"</em>.
           </p>
         </div>
 
