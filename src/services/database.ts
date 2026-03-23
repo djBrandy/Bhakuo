@@ -284,6 +284,7 @@ export const getNewQueueItemsForMentor = async (since?: string) => {
 }
 
 
+export const getOpenQueue = async () => {
   const { data, error } = await supabase
     .from('knowledge_queue')
     .select('*, profiles(full_name)')
