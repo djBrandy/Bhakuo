@@ -170,7 +170,7 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
       const emptyLesson = syllabus.find((l: any) => !coveredCategories.has(l.category))
 
       // Or find a lesson that has knowledge but missing expected_response
-      const incompleteEntry = knowledge.find((k: any) => !k.expected_response)
+      const incompleteEntry = knowledge.find((k: any) => !k.expected_response && (k.audience || k.time_of_day))
 
       let question: string
       if (incompleteEntry) {
@@ -234,7 +234,7 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
       const coveredCategories = new Set(knowledge.map((k: any) => k.category))
       const emptyLesson = syllabus.find((l: any) => !coveredCategories.has(l.category))
       const incompleteEntry = knowledge.find(
-        (k: any) => !k.expected_response && !taughtThisSession.includes(k.kitaveta)
+        (k: any) => !k.expected_response && !taughtThisSession.includes(k.kitaveta) && (k.audience || k.time_of_day)
       )
 
       let nextQuestion: string
