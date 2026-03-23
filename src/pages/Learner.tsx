@@ -70,7 +70,11 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
       const status = completedIds.has(l.id) ? '✓ completed' : inProgressIds.has(l.id) ? '→ in progress' : 'not started'
       const words = knowledge.filter((k: any) => k.category === l.category)
       const wordList = words.length
-        ? words.map((k: any) => `  • "${k.kitaveta}" = ${k.english}${k.swahili ? ` / ${k.swahili}` : ''}${k.expected_response ? ` (reply: ${k.expected_response})` : ''}${k.pronunciation ? ` [pron: ${k.pronunciation}]` : ''}`).join('\n')
+        ? words.map((k: any) => {
+            let entry = `  • "${k.kitaveta}" = ${k.english}${k.swahili ? ` / ${k.swahili}` : ''}${k.expected_response ? ` (reply: ${k.expected_response})` : ''}${k.pronunciation ? ` [pron: ${k.pronunciation}]` : ''}`
+            if (k.notes) entry += `\n    Full exchange: ${k.notes}`
+            return entry
+          }).join('\n')
         : '  (no verified words yet)'
       return `Lesson ${l.lesson_number} (Unit ${l.unit}): "${l.title}" [${status}]\n${wordList}`
     }).join('\n\n')
@@ -91,7 +95,8 @@ VERIFIED KNOWLEDGE BASE (the ONLY Kitaveta you are allowed to teach):
 ${syllabusContext}
 
 TEACHING APPROACH:
-- Teach only what is in the verified list above.
+- If a word has a "Full exchange" in the notes, use ALL turns of that exchange during roleplay or practice — do not stop after the first reply.
+- During roleplay, stay in character for the entire exchange until it naturally concludes.
 - Introduce a word, explain it, use it in context, then quiz ${firstName}.
 - Keep responses short and mobile-friendly.
 - If ${firstName} wants to jump to a topic that has no verified words yet, say you don't have those verified yet.`
