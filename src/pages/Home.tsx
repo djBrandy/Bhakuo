@@ -32,13 +32,13 @@ const Home = ({ onNavigate, profile }: HomeProps) => {
         </div>
         <div className="home-demo-chat">
           <div className="home-demo-bubble ai">
-            Washindaze! 👋 That means "How are you?" in Kitaveta. Now — how do you think you'd reply?
+            Washindaze! 👋 That means "How have you been?" in Kitaveta. Now — how do you think you'd reply?
           </div>
           <div className="home-demo-bubble user">
             Umm… I don't know yet!
           </div>
           <div className="home-demo-bubble ai">
-            That's exactly why we're here. The reply is <strong>"Washindaze sana"</strong> — meaning "I am very well." Let's practice it together. Say it back to me 👇
+            That's exactly why we're here. The reply is <strong>"Mboha"</strong> — meaning "I am well." Let's practice it together. Say it back to me 👇
           </div>
         </div>
         <button className="home-demo-cta" onClick={() => onNavigate('learner')}>
