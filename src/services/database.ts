@@ -231,27 +231,10 @@ export const queueKnowledgeGap = async (question: string, learnerName: string, a
       asked_by: user?.id,
       question,
       ai_attempt: aiAttempt,
-      suggested_category: suggestedCategory
+      suggested_category: suggestedCategory,
+      learner_name: learnerName
     }])
   if (error) throw error
-
-  // Post a visible notification into every mentor's chat
-  const { data: mentors } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('role', 'mentor')
-
-  if (mentors && mentors.length > 0) {
-    const notification = `📌 ${learnerName} asked: "${question}" — how do we say this in Kitaveta?`
-    await supabase.from('chat_messages').insert(
-      mentors.map((m: { id: string }) => ({
-        user_id: m.id,
-        role: 'ai',
-        text: notification,
-        context: 'mentor'
-      }))
-    )
-  }
 }
 
 export const notifyLearnersOfAnswer = async (kitaveta: string, english: string) => {
@@ -289,7 +272,18 @@ export const markGapNotified = async (gapId: string) => {
   await supabase.from('knowledge_queue').update({ status: 'notified' }).eq('id', gapId)
 }
 
-export const getOpenQueue = async () => {
+export const getNewQueueItemsForMentor = async (since?: string) => {
+  let query = supabase
+    .from('knowledge_queue')
+    .select('id, question, learner_name, created_at')
+    .eq('status', 'open')
+    .order('created_at', { ascending: true })
+  if (since) query = query.gt('created_at', since)
+  const { data } = await query
+  return data ?? []
+}
+
+
   const { data, error } = await supabase
     .from('knowledge_queue')
     .select('*, profiles(full_name)')

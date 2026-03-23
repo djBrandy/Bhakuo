@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type { Page, Profile, Knowledge } from '../types'
 import { ShieldAlert, Save, X, Sparkles } from 'lucide-react'
 import { supabase } from '../services/supabase'
-import { getSyllabus, getChatMessages, saveChatMessage, notifyLearnersOfAnswer } from '../services/database'
+import { getSyllabus, getChatMessages, saveChatMessage, notifyLearnersOfAnswer, getNewQueueItemsForMentor } from '../services/database'
 import ChatInterface from '../components/ChatInterface'
 
 interface MentorProps {
@@ -58,12 +58,25 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
   const initChat = async () => {
     setLoading(true)
     try {
-      const history = await getChatMessages(profile!.id, 'mentor')
+      const [history, queueItems] = await Promise.all([
+        getChatMessages(profile!.id, 'mentor'),
+        getNewQueueItemsForMentor()
+      ])
+
+      // Find queue items not already mentioned in chat history
+      const historyText = history.map(m => m.text).join(' ')
+      const newNotifications = queueItems
+        .filter((item: any) => !historyText.includes(item.question))
+        .map((item: any) => ({
+          role: 'ai' as const,
+          text: `📌 ${item.learner_name ?? 'A learner'} asked: "${item.question}" — how do we say this in Kitaveta?`
+        }))
+
       if (history.length > 0) {
-        setMessages(history)
+        setMessages([...history, ...newNotifications])
       } else {
         const greeting = { role: 'ai' as const, text: `Washindaze? What word or phrase are we teaching to preserve our roots?` }
-        setMessages([greeting])
+        setMessages([greeting, ...newNotifications])
         await saveChatMessage(profile!.id, 'ai', greeting.text, 'mentor').catch(() => {})
       }
     } catch (err) {
