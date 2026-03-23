@@ -21,7 +21,7 @@ const Home = ({ onNavigate, profile }: HomeProps) => {
         </h1>
         <p className="home-hero-sub">
           Alexander is an AI tutor trained exclusively on verified Kitaveta knowledge from native speakers.
-          He teaches you the way a grandmother would — word by word, exchange by exchange.
+          He teaches you word by word, exchange by exchange.
         </p>
       </div>
 
@@ -60,7 +60,7 @@ const Home = ({ onNavigate, profile }: HomeProps) => {
               what native mentors have verified. Greetings, vocabulary, roleplay, quizzes.
             </p>
             <ul className="home-card-features">
-              <li>✦ Chat naturally, like WhatsApp</li>
+              <li>✦ Chat naturally, back and forth</li>
               <li>✦ Quiz mode tests what you know</li>
               <li>✦ Every mistake becomes a lesson</li>
             </ul>
@@ -77,7 +77,7 @@ const Home = ({ onNavigate, profile }: HomeProps) => {
               <h2>Contribute Knowledge</h2>
               <p>
                 You know Kitaveta. Teach Alexander — and through him, everyone else.
-                Your words become permanent, verified lessons for the whole family.
+                Your words become permanent, verified lessons.
               </p>
               <ul className="home-card-features">
                 <li>✦ AI guides you through each entry</li>
