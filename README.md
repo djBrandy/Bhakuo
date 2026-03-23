@@ -1,73 +1,86 @@
-# React + TypeScript + Vite
+# Project Alexander - Kitaveta Language Learning Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mobile-first Progressive Web App (PWA) built to preserve and teach the **Kitaveta language** — a language spoken by the Kitaveta people of Kenya. Named after the creator's grandfather, "The Great," Project Alexander bridges the generational gap between native Kitaveta speakers and those eager to learn.
 
-Currently, two official plugins are available:
+## 🎯 Mission
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+To create a freely accessible, AI-powered platform where:
+- **Learners** study Kitaveta through structured lessons with verified native knowledge
+- **Mentors** (native speakers) contribute and verify language knowledge
+- **The AI (Alexander)** teaches grounded in database truth, never hallucinating
 
-## React Compiler
+## ✨ Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### For Learners
+- 📚 **70-Lesson Syllabus** organized into 5 units
+- 💬 **WhatsApp-style Chat Interface** with Alexander AI tutor
+- 🎙️ **Voice Pronunciation** with audio recordings
+- 📊 **Progress Tracking** - Know exactly what you've learned
+- 🔊 **Audio Playback** - Hear native pronunciation
+- 📱 **PWA Ready** - Install on your phone like a native app
 
-## Expanding the ESLint configuration
+### For Mentors
+- ✍️ **Structured Knowledge Entry** with AI assistance
+- 🤝 **Peer Verification System** 
+- 🧠 **Grammar Rules** - Teach syntax patterns, not just words
+- 📊 **Knowledge Gaps** - See what learners are asking for
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### AI Integration
+- 🤖 **Groq LLaMA 3.3** - Fast, accurate language tutoring
+- 🔐 **Grounded AI** - Uses only verified knowledge from database
+- ⚠️ **Gap Detection** - Automatically logs unanswered questions
+- 🎯 **Contextual Teaching**
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🏗️ Tech Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **React 18 + TypeScript** - Type-safe UI
+- **Vite** - Lightning-fast build
+- **Supabase** - Database & Auth
+- **Groq AI** - Language model (user's API key)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 🚀 Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📱 Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+See `PROJECT_STRUCTURE.md` for detailed documentation.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Key directories:
+- `src/components/` - Reusable UI components
+- `src/pages/` - Page-level components
+- `src/services/` - Backend integration
+- `src/styles/` - Stylesheets
+- `src/utils/` & `src/hooks/` - Expandable utilities
+
+## 🎨 Design System
+
+**Dark Navy Theme:**
+- Primary Blue: #2563eb
+- Accent Gold: #f59e0b
+- Dark Navy: #020617
+
+**Responsive Design:**
+- Mobile-first approach
+- Responsive to 800px+ desktops
+- PWA-optimized for phones
+
+## 🔐 Security
+
+- Row Level Security (RLS) with Supabase
+- API keys stored in user profiles
+- Grounded AI prevents hallucinations
+- Peer-reviewed knowledge
+
+---
+
+**Project Alexander** - *Preserving language, Bridging generations* 🌍

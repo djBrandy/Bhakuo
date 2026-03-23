@@ -1,13 +1,14 @@
-import type { Page } from '../types'
+import type { Page, Profile } from '../types'
 
 interface HomeProps {
   onNavigate: (page: Page) => void
+  profile: Profile | null
 }
 
-const Home = ({ onNavigate }: HomeProps) => {
+const Home = ({ onNavigate, profile }: HomeProps) => {
   return (
     <div className="page home-page">
-      <h1>Welcome to Alexander</h1>
+      <h1>Welcome{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}</h1>
       <p className="vision">
         Bridging the gap between speakers of Kitaveta and those who want to learn.
       </p>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import type { Page } from '../types'
-import { Book, MessageCircle, History, Volume2, Search, Users } from 'lucide-react'
+import { Book, MessageCircle, Volume2, Users } from 'lucide-react'
 import { supabase } from '../services/supabase'
 
-const Library = ({ onNavigate }: { onNavigate: (page: Page) => void }) => {
+const Library = ({ }: { onNavigate: (page: Page) => void }) => {
   const [activeTab, setActiveTab] = useState<'phrases' | 'stories' | 'lineage'>('phrases')
   const [groupedPhrases, setGroupedPhrases] = useState<any>({})
   const [loading, setLoading] = useState(true)
@@ -41,8 +41,10 @@ const Library = ({ onNavigate }: { onNavigate: (page: Page) => void }) => {
     setLoading(false)
   }
 
+  // @ts-ignore: Voice features temporarily disabled, preserving code for future use
   const playAudio = (url: string) => {
-    new Audio(url).play()
+    // Feature coming soon - audio playback temporarily disabled
+    alert('Audio playback feature coming soon!')
   }
 
   return (

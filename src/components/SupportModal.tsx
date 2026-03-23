@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Smartphone, CreditCard, Heart, CheckCircle } from 'lucide-react'
+import { X, Smartphone, Heart, CheckCircle } from 'lucide-react'
 
 interface SupportModalProps {
   isOpen: boolean

@@ -11,68 +11,69 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import './App.css'
 
-import type { Page } from './types'
+import type { Page, Profile } from './types'
 
 function App() {
   const [session, setSession] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('home')
-  const [apiKey, setApiKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session with error handling to avoid hang
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        setSession(session)
-      })
-      .catch((err) => {
-        console.error('Session check failed:', err)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session) fetchProfile(session.user.id)
+      else setLoading(false)
+    })
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (session) fetchProfile(session.user.id)
+      else {
+        setProfile(null)
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    const savedKey = localStorage.getItem('groq_api_key')
-    if (savedKey) setApiKey(savedKey)
-  }, [])
-
-  const handleSaveApiKey = (key: string) => {
-    localStorage.setItem('groq_api_key', key)
-    setApiKey(key)
-    setCurrentPage('home')
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    
+    if (data) setProfile(data)
+    setLoading(false)
   }
 
   const renderPage = () => {
-    if (loading) return <div className="centered"><p>Loading...</p></div>
-    
-    // If not logged in, only show Auth page
-    if (!session) {
-      return <Auth onSuccess={() => setCurrentPage('home')} />
-    }
+    if (loading) return <div className="centered"><p>Loading Alexander...</p></div>
+    if (!session) return <Auth onSuccess={() => {}} />
+
+    const apiKey = profile?.groq_api_key || null
 
     switch (currentPage) {
-      case 'home': return <Home onNavigate={setCurrentPage} />
-      case 'mentor': return <Mentor apiKey={apiKey} onNavigate={setCurrentPage} />
-      case 'learner': return <Learner apiKey={apiKey} onNavigate={setCurrentPage} />
-      case 'settings': return <Settings apiKey={apiKey} onSave={handleSaveApiKey} onNavigate={setCurrentPage} />
-      case 'live': return <LiveSession apiKey={apiKey} onNavigate={setCurrentPage} />
+      case 'home': return <Home onNavigate={setCurrentPage} profile={profile} />
+      case 'mentor': return <Mentor profile={profile} onNavigate={setCurrentPage} />
+      case 'learner': return <Learner profile={profile} apiKey={apiKey} onNavigate={setCurrentPage} />
+      case 'settings': return <Settings profile={profile} onRefresh={() => fetchProfile(session.user.id)} onNavigate={setCurrentPage} />
+      case 'live': return <LiveSession apiKey={apiKey} onNavigate={setCurrentPage} profile={profile} />
       case 'library': return <Library onNavigate={setCurrentPage} />
-      default: return <Home onNavigate={setCurrentPage} />
+      default: return <Home onNavigate={setCurrentPage} profile={profile} />
     }
   }
 
   return (
-    <div className="app-container">
-      <Header currentPage={currentPage} onNavigate={setCurrentPage} session={session} />
+    <div className="app-container mobile-pwa">
+      <Header 
+        currentPage={currentPage} 
+        onNavigate={setCurrentPage} 
+        session={session} 
+        profile={profile} 
+      />
       <main className="main-content">
         {renderPage()}
       </main>

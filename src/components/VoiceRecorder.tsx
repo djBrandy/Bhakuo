@@ -1,48 +1,33 @@
 import { useState, useRef } from 'react'
-import { Mic, Square, Play, Trash2, CheckCircle } from 'lucide-react'
+import { Mic, Square, Trash2, CheckCircle } from 'lucide-react'
 
 interface VoiceRecorderProps {
   onAudioCaptured: (blob: Blob) => void
   onClear: () => void
 }
 
+// @ts-ignore: Voice features temporarily disabled, preserving code for future use
 const VoiceRecorder = ({ onAudioCaptured, onClear }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false)
   const [audioURL, setAudioURL] = useState<string | null>(null)
+  // @ts-ignore: Voice features temporarily disabled, preserving code for future use
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  // @ts-ignore: Voice features temporarily disabled, preserving code for future use
   const chunksRef = useRef<Blob[]>([])
 
   const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = mediaRecorder
-      chunksRef.current = []
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data)
-      }
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        setAudioURL(URL.createObjectURL(audioBlob))
-        onAudioCaptured(audioBlob)
-      }
-
-      mediaRecorder.start()
-      setIsRecording(true)
-    } catch (err) {
-      console.error('Error accessing microphone:', err)
-      alert('Could not access microphone. Please check permissions.')
-    }
+    // Feature coming soon - temporarily disabled
+    alert('Voice recording feature coming soon! For now, pronunciation guides will be added by mentors.')
+    return
   }
 
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop()
+    // Feature coming soon - temporarily disabled
     setIsRecording(false)
   }
 
   const clear = () => {
+    // Feature coming soon - temporarily disabled
     setAudioURL(null)
     onClear()
   }

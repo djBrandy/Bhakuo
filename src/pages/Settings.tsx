@@ -1,42 +1,53 @@
 import { useState, useEffect } from 'react'
-import type { Page } from '../types'
-import { ExternalLink, Info, Key, ShieldCheck, RefreshCw } from 'lucide-react'
+import type { Page, Profile } from '../types'
+import { Key, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { supabase } from '../services/supabase'
 
 interface SettingsProps {
-  apiKey: string | null
-  onSave: (key: string) => void
+  profile: Profile | null
+  onRefresh: () => void
   onNavigate: (page: Page) => void
 }
 
-const Settings = ({ apiKey, onSave, onNavigate }: SettingsProps) => {
+const Settings = ({ profile, onRefresh, onNavigate }: SettingsProps) => {
   const [inputKey, setInputKey] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (apiKey) setInputKey(apiKey)
-  }, [apiKey])
+    if (profile?.groq_api_key) setInputKey(profile.groq_api_key)
+  }, [profile])
+
+  const handleSave = async () => {
+    if (!profile) return
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ groq_api_key: inputKey })
+        .eq('id', profile.id)
+      
+      if (error) throw error
+      onRefresh()
+      alert('Settings updated successfully!')
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="page settings-page">
       <h1>Configuration</h1>
-      <p className="vision">Set up your AI bridge to the Kitaveta language.</p>
+      <p className="vision">Manage your identity and intelligence keys.</p>
       
       <div className="settings-grid">
-        <section className="settings-section main-card">
+        <section className="card">
           <div className="section-header">
-            <Key className="icon" />
-            <h3>Groq AI API Key</h3>
+            <Key className="accent" />
+            <h3>Intelligence Layer</h3>
           </div>
-          
-          <div className="onboarding-guide">
-            <p>To keep Alexander free and private, we use your own Groq API key. Here is how to get one:</p>
-            <ol className="steps">
-              <li>Visit the <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">Groq Cloud Console <ExternalLink size={14} /></a></li>
-              <li>Sign up (it's free and fast).</li>
-              <li>Click <strong>"Create API Key"</strong>, name it "Alexander", and copy it.</li>
-              <li>Paste the key below.</li>
-            </ol>
-          </div>
-
+          <p className="small">Your Groq API Key is saved directly to your secure Supabase profile.</p>
           <div className="input-group">
             <input 
               type="password" 
@@ -44,28 +55,27 @@ const Settings = ({ apiKey, onSave, onNavigate }: SettingsProps) => {
               onChange={(e) => setInputKey(e.target.value)}
               placeholder="gsk_..."
             />
-            <button className="primary-btn" onClick={() => onSave(inputKey)}>
-              {apiKey ? 'Update Key' : 'Save Key'}
+            <button className="primary-btn" onClick={handleSave} disabled={loading}>
+              {loading ? 'Saving...' : 'Update Key'}
             </button>
           </div>
-          {apiKey && <p className="success-text"><ShieldCheck size={16} /> Your key is securely stored in this browser.</p>}
         </section>
 
-        <section className="settings-section info-card">
+        <section className="card">
           <div className="section-header">
-            <Info className="icon" />
-            <h3>How it works</h3>
+            <ShieldCheck className="primary" />
+            <h3>Your Profile</h3>
           </div>
-          
-          <div className="info-item">
-            <div className="info-title"><RefreshCw size={14} /> The 24-Hour Cycle</div>
-            <p className="small">Groq provides a generous free tier. If the AI stops responding, it usually means you've hit the daily limit. It will automatically reset after 24 hours.</p>
+          <div className="profile-details">
+            <p><strong>Status:</strong> <span className="badge">{profile?.role}</span></p>
+            <p><strong>Name:</strong> {profile?.full_name || 'Not set'}</p>
           </div>
-
-          <div className="info-item">
-            <div className="info-title"><ShieldCheck size={14} /> Privacy First</div>
-            <p className="small">We never see your key. It is stored directly in your browser's "LocalStorage," meaning only your phone can use it to talk to the AI.</p>
-          </div>
+          {profile?.role === 'pending_mentor' && (
+            <div className="warning-box">
+              <AlertTriangle size={16} />
+              <span>Awaiting verification from another Mentor.</span>
+            </div>
+          )}
         </section>
       </div>
 
