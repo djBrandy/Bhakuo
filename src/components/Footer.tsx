@@ -1,31 +1,46 @@
-import { useState } from 'react'
 import type { Page } from '../types'
-import SupportModal from './SupportModal'
 
 interface FooterProps {
   onNavigate: (page: Page) => void
 }
 
 const Footer = ({ onNavigate }: FooterProps) => {
-  const [isSupportOpen, setIsSupportOpen] = useState(false)
-
   return (
     <footer className="footer">
-      <div className="footer-links">
-        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home'); }}>About Alexander</a>
-        <a href="#" onClick={(e) => { e.preventDefault(); }}>Open Source</a>
-      </div>
-      <button className="support-btn" onClick={() => setIsSupportOpen(true)}>
-        Support Developer
-      </button>
-      <div className="copyright">
-        © {new Date().getFullYear()} Alexander Project
-      </div>
+      <div className="footer-inner">
+        <div className="footer-brand">
+          <span className="footer-logo">ALEXANDER</span>
+          <p className="footer-desc">
+            An open-source platform built to preserve the Kitaveta language — spoken by the Kitaveta people of Kenya.
+            Native mentors contribute verified words and phrases. Alexander, the AI, teaches only what the mentors have confirmed.
+            No hallucinations. No guessing. Just truth, passed down.
+          </p>
+        </div>
 
-      <SupportModal 
-        isOpen={isSupportOpen} 
-        onClose={() => setIsSupportOpen(false)} 
-      />
+        <div className="footer-links">
+          <a href="https://github.com/djBrandy/Bhakuo" target="_blank" rel="noopener noreferrer">
+            View on GitHub
+          </a>
+          <span className="footer-dot">·</span>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('home') }}>
+            About
+          </a>
+        </div>
+
+        <div className="footer-support">
+          <p>Built with care by <strong>Brandon</strong>. If this project means something to you, consider supporting its development.</p>
+          <a
+            href="https://buymeacoffee.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="support-link"
+          >
+            ☕ Support Brandon
+          </a>
+        </div>
+
+        <p className="footer-copy">© {new Date().getFullYear()} Project Alexander · Open Source · MIT License</p>
+      </div>
     </footer>
   )
 }
