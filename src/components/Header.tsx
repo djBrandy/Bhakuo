@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Page, Profile } from '../types'
 import { supabase } from '../services/supabase'
-import { Home, BookOpen, GraduationCap, Radio, Library, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { Home, BookOpen, GraduationCap, Library, Settings, LogOut, ChevronDown } from 'lucide-react'
 
 interface HeaderProps {
   currentPage: Page
@@ -23,7 +23,6 @@ const Header = ({ currentPage, onNavigate, session, profile }: HeaderProps) => {
     { page: 'home',    label: 'Home',       icon: <Home size={18} /> },
     { page: 'learner', label: 'Learn',      icon: <GraduationCap size={18} /> },
     ...(isMentor ? [{ page: 'mentor' as Page, label: 'Mentor', icon: <BookOpen size={18} /> }] : []),
-    { page: 'live',    label: 'Live',       icon: <Radio size={18} /> },
     { page: 'library', label: 'Library',    icon: <Library size={18} /> },
     { page: 'settings',label: 'Settings',   icon: <Settings size={18} /> },
   ]
