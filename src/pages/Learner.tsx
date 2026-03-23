@@ -97,6 +97,7 @@ ${syllabusContext}
 TEACHING APPROACH:
 - If a word has a "Full exchange" in the notes, use ALL turns of that exchange during roleplay or practice — do not stop after the first reply.
 - During roleplay, stay in character for the entire exchange until it naturally concludes.
+- IMPORTANT: If the full exchange shows consecutive turns by the same speaker, deliver them together as one response. For example, if Grandmother says "haika" then immediately "papa tasinyi" before the boy responds, say both in one message: "Haika! ...Papa tasinyi?"
 - Introduce a word, explain it, use it in context, then quiz ${firstName}.
 - Keep responses short and mobile-friendly.
 - If ${firstName} wants to jump to a topic that has no verified words yet, say you don't have those verified yet.`
