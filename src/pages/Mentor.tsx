@@ -197,7 +197,8 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
           time_of_day: (pendingEntry as any).time_of_day ?? 'anytime',
           category: 'greetings',
           contributor_id: profile.id,
-          audio_url: ''
+          is_verified: true,
+          audio_url: null
         }])
 
       if (error) throw error
@@ -231,7 +232,9 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
       setMessages(prev => [...prev, { role: 'ai', text: nextQuestion }])
       await saveChatMessage(profile.id, 'ai', nextQuestion, 'mentor').catch(() => {})
     } catch (err: any) {
-      alert(err.message)
+      const errMsg = `Save failed: ${err.message}`
+      setMessages(prev => [...prev, { role: 'ai', text: errMsg }])
+      await saveChatMessage(profile.id, 'ai', errMsg, 'mentor').catch(() => {})
     } finally {
       setIsProcessing(false)
     }
