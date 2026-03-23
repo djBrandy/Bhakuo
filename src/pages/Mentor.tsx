@@ -58,12 +58,12 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
   const initChat = async () => {
     setLoading(true)
     try {
-      const [history, queueItems] = await Promise.all([
-        getChatMessages(profile!.id, 'mentor'),
-        getNewQueueItemsForMentor()
-      ])
+      const history = await getChatMessages(profile!.id, 'mentor')
 
-      // Find queue items not already mentioned in chat history
+      // Only fetch queue items newer than the last saved message
+      const lastSeen = history.length > 0 ? history[history.length - 1].created_at : undefined
+      const queueItems = await getNewQueueItemsForMentor(lastSeen)
+
       const historyText = history.map(m => m.text).join(' ')
       const newNotifications = queueItems
         .filter((item: any) => !historyText.includes(item.question))

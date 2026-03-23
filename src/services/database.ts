@@ -206,12 +206,12 @@ export const upsertProgress = async (progress: {
 export const getChatMessages = async (userId: string, context: 'learner' | 'mentor') => {
   const { data, error } = await supabase
     .from('chat_messages')
-    .select('role, text')
+    .select('role, text, created_at')
     .eq('user_id', userId)
     .eq('context', context)
     .order('created_at', { ascending: true })
   if (error) throw error
-  return data as { role: 'user' | 'ai'; text: string }[]
+  return data as { role: 'user' | 'ai'; text: string; created_at: string }[]
 }
 
 export const saveChatMessage = async (userId: string, role: 'user' | 'ai', text: string, context: 'learner' | 'mentor') => {
@@ -276,7 +276,7 @@ export const getNewQueueItemsForMentor = async (since?: string) => {
   let query = supabase
     .from('knowledge_queue')
     .select('id, question, learner_name, created_at')
-    .eq('status', 'open')
+    .in('status', ['open', 'answered'])
     .order('created_at', { ascending: true })
   if (since) query = query.gt('created_at', since)
   const { data } = await query
