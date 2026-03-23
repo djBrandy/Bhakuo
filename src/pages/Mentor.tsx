@@ -123,10 +123,12 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     await saveChatMessage(profile.id, 'user', input, 'mentor').catch(() => {})
 
     try {
-      const history = updatedMessages.map(m => ({
-        role: m.role === 'ai' ? 'assistant' : 'user',
-        content: m.text
-      }))
+      const history = updatedMessages
+        .filter(m => !m.text.startsWith('📌'))
+        .map(m => ({
+          role: m.role === 'ai' ? 'assistant' : 'user',
+          content: m.text
+        }))
 
       const aiText = await askGroq(history)
 
@@ -146,8 +148,8 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
         setMessages(prev => [...prev, { role: 'ai', text: aiText }])
         await saveChatMessage(profile.id, 'ai', aiText, 'mentor').catch(() => {})
       }
-    } catch (err) {
-      const errMsg = "I had a moment of confusion. Could you repeat that?"
+    } catch (err: any) {
+      const errMsg = `I had a moment of confusion: ${err?.message ?? 'unknown error'}. Could you repeat that?`
       setMessages(prev => [...prev, { role: 'ai', text: errMsg }])
     } finally {
       setIsProcessing(false)
