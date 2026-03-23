@@ -125,7 +125,23 @@ const Settings = ({ profile, onRefresh }: SettingsProps) => {
         {profile?.role === 'pending_mentor' && (
           <div className="warning-box">
             <AlertTriangle size={16} />
-            <span>Awaiting verification from another Mentor.</span>
+            <span>Your mentor request is awaiting approval.</span>
+          </div>
+        )}
+
+        {profile?.role === 'learner' && (
+          <div className="settings-mentor-request">
+            <p className="settings-keys-note">
+              Know Kitaveta natively and want to contribute? Request mentor access — an existing mentor will review and approve you.
+            </p>
+            <button className="settings-request-btn" onClick={async () => {
+              if (!profile) return
+              const { error } = await supabase.from('profiles').update({ role: 'pending_mentor' }).eq('id', profile.id)
+              if (!error) onRefresh()
+              else alert(error.message)
+            }}>
+              Request Mentor Access
+            </button>
           </div>
         )}
       </section>

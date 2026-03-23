@@ -1,6 +1,6 @@
 import type { Page, Profile } from '../types'
 import { supabase } from '../services/supabase'
-import { Home, BookOpen, GraduationCap, Library, Settings, LogOut } from 'lucide-react'
+import { Home, BookOpen, GraduationCap, Library, Settings, LogOut, ShieldCheck } from 'lucide-react'
 
 interface HeaderProps {
   currentPage: Page
@@ -15,6 +15,7 @@ const Header = ({ currentPage, onNavigate, session, profile }: HeaderProps) => {
   }
 
   const isMentor = profile?.role === 'mentor' || profile?.role === 'pending_mentor'
+  const isAdmin = profile?.role === 'mentor' && !(profile as any).verified_by
 
   const navItems: { page: Page; label: string; icon: React.ReactNode }[] = [
     { page: 'home',     label: 'Home',     icon: <Home size={18} /> },
@@ -22,6 +23,7 @@ const Header = ({ currentPage, onNavigate, session, profile }: HeaderProps) => {
     ...(isMentor ? [{ page: 'mentor' as Page, label: 'Mentor', icon: <BookOpen size={18} /> }] : []),
     { page: 'library',  label: 'Library',  icon: <Library size={18} /> },
     { page: 'settings', label: 'Settings', icon: <Settings size={18} /> },
+    ...(isAdmin ? [{ page: 'admin' as Page, label: 'Admin', icon: <ShieldCheck size={18} /> }] : []),
   ]
 
   return (

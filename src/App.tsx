@@ -7,6 +7,7 @@ import Settings from './pages/Settings'
 import Auth from './pages/Auth'
 import LiveSession from './pages/LiveSession'
 import Library from './pages/Library'
+import Admin from './pages/Admin'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import './App.css'
@@ -44,7 +45,6 @@ function App() {
       .select('*')
       .eq('id', userId)
       .single()
-    
     if (data) setProfile(data)
     setLoading(false)
   }
@@ -63,23 +63,24 @@ function App() {
     }
 
     switch (currentPage) {
-      case 'home': return <Home onNavigate={setCurrentPage} profile={profile} />
-      case 'mentor': return <Mentor profile={profile} onNavigate={setCurrentPage} />
-      case 'learner': return <Learner profile={profile} apiKey={apiKey} onNavigate={setCurrentPage} />
+      case 'home':     return <Home onNavigate={setCurrentPage} profile={profile} />
+      case 'mentor':   return <Mentor profile={profile} onNavigate={setCurrentPage} />
+      case 'learner':  return <Learner profile={profile} apiKey={apiKey} onNavigate={setCurrentPage} />
       case 'settings': return <Settings profile={profile} onRefresh={() => fetchProfile(session.user.id)} onNavigate={setCurrentPage} />
-      case 'live': return <LiveSession apiKey={apiKey} onNavigate={setCurrentPage} profile={profile} />
-      case 'library': return <Library onNavigate={setCurrentPage} />
-      default: return <Home onNavigate={setCurrentPage} profile={profile} />
+      case 'live':     return <LiveSession apiKey={apiKey} onNavigate={setCurrentPage} profile={profile} />
+      case 'library':  return <Library onNavigate={setCurrentPage} />
+      case 'admin':    return <Admin profile={profile} onNavigate={setCurrentPage} />
+      default:         return <Home onNavigate={setCurrentPage} profile={profile} />
     }
   }
 
   return (
     <div className="app-container mobile-pwa">
-      <Header 
-        currentPage={currentPage} 
-        onNavigate={setCurrentPage} 
-        session={session} 
-        profile={profile} 
+      <Header
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+        session={session}
+        profile={profile}
       />
       <main className="main-content">
         {renderPage()}

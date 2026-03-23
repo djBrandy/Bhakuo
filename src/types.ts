@@ -1,4 +1,4 @@
-export type Page = 'home' | 'mentor' | 'learner' | 'settings' | 'auth' | 'live' | 'library';
+export type Page = 'home' | 'mentor' | 'learner' | 'settings' | 'auth' | 'live' | 'library' | 'admin';
 
 export type UserRole = 'mentor' | 'pending_mentor' | 'learner';
 
