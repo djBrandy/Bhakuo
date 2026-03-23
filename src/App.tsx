@@ -45,7 +45,22 @@ function App() {
       .select('*')
       .eq('id', userId)
       .single()
-    if (data) setProfile(data)
+
+    if (data) {
+      setProfile(data)
+    } else {
+      // Google OAuth user — no profile yet, create one
+      const { data: { user } } = await supabase.auth.getUser()
+      const name = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? null
+      await supabase.from('profiles').insert([{
+        id: userId,
+        full_name: name,
+        role: 'learner',
+        created_at: new Date().toISOString()
+      }])
+      const { data: fresh } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      if (fresh) setProfile(fresh)
+    }
     setLoading(false)
   }
 
