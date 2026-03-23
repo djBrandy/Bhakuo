@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type { Page, Profile, ChatMessage } from '../types'
 import { getSyllabus, getLearnerProgress, getChatMessages, saveChatMessage, queueKnowledgeGap, getAnsweredGapsForLearner, markGapNotified } from '../services/database'
 import { supabase } from '../services/supabase'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Zap, MessageCircle } from 'lucide-react'
 import ChatInterface from '../components/ChatInterface'
 
 interface LearnerProps {
@@ -15,6 +15,10 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [thinking, setThinking] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [mode, setMode] = useState<'chat' | 'quiz'>('chat')
+  const [quizMessages, setQuizMessages] = useState<ChatMessage[]>([])
+  const [quizThinking, setQuizThinking] = useState(false)
+  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 })
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there'
 
   useEffect(() => {
@@ -50,22 +54,15 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
     }
   }
 
-  const buildSystemPrompt = async () => {
+  const buildKnowledgeBase = async () => {
     const [syllabus, progress, knowledgeRes] = await Promise.all([
       getSyllabus(),
       getLearnerProgress(profile!.id),
       supabase.from('knowledge').select('kitaveta, english, swahili, expected_response, pronunciation, notes, category, audience, time_of_day, social_context: context').eq('is_verified', true)
     ])
-
     const knowledge: any[] = knowledgeRes.data ?? []
-
-    const completedIds = new Set(
-      progress.filter((p: any) => p.status === 'completed').map((p: any) => p.syllabus_id)
-    )
-    const inProgressIds = new Set(
-      progress.filter((p: any) => p.status === 'in_progress').map((p: any) => p.syllabus_id)
-    )
-
+    const completedIds = new Set(progress.filter((p: any) => p.status === 'completed').map((p: any) => p.syllabus_id))
+    const inProgressIds = new Set(progress.filter((p: any) => p.status === 'in_progress').map((p: any) => p.syllabus_id))
     const syllabusContext = syllabus.map((l: any) => {
       const status = completedIds.has(l.id) ? '✓ completed' : inProgressIds.has(l.id) ? '→ in progress' : 'not started'
       const words = knowledge.filter((k: any) => k.category === l.category)
@@ -78,7 +75,11 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
         : '  (no verified words yet)'
       return `Lesson ${l.lesson_number} (Unit ${l.unit}): "${l.title}" [${status}]\n${wordList}`
     }).join('\n\n')
+    return { knowledge, syllabusContext }
+  }
 
+  const buildSystemPrompt = async () => {
+    const { knowledge, syllabusContext } = await buildKnowledgeBase()
     const hasAnyKnowledge = knowledge.length > 0
 
     return `You are Alexander, a warm and patient Kitaveta language tutor in a continuous one-on-one conversation with ${firstName}.
@@ -101,6 +102,107 @@ TEACHING APPROACH:
 - Introduce a word, explain it, use it in context, then quiz ${firstName}.
 - Keep responses short and mobile-friendly.
 - If ${firstName} wants to jump to a topic that has no verified words yet, say you don't have those verified yet.`
+  }
+
+  const buildQuizSystemPrompt = async () => {
+    const { knowledge, syllabusContext } = await buildKnowledgeBase()
+    if (knowledge.length === 0) return null
+    return `You are Alexander, running a Kitaveta language quiz for ${firstName}. This is a focused, interactive quiz session.
+
+VERIFIED KNOWLEDGE BASE (the ONLY Kitaveta you may quiz on):
+${syllabusContext}
+
+QUIZ RULES — NON-NEGOTIABLE:
+- Only quiz on words and phrases explicitly listed above. Never invent or guess.
+- Vary question types across the session: translation (Kitaveta→English), reverse translation (English→Kitaveta), fill-in-the-blank in a sentence, roleplay response ("Someone says X — what do you reply?"), and pronunciation recall.
+- Ask ONE question at a time. Wait for the answer before moving on.
+- After EVERY answer — correct or wrong — teach before continuing:
+  • If CORRECT: affirm warmly, then add one extra insight (pronunciation tip, usage note, or a related word from the list). Then ask the next question.
+  • If WRONG: do NOT just say "wrong". Explain WHY the correct answer is what it is — give context, a memory trick, or the full exchange if relevant. Then gently re-ask the same question once before moving on.
+- Keep a running score in your head. Every 5 questions, give ${firstName} a brief progress summary (e.g. "4 out of 5 so far — you're doing great!").
+- Keep responses short and mobile-friendly. No walls of text.
+- If ${firstName} asks to stop or says "end quiz", say goodbye warmly and summarise their final score.
+- Never break character or reference these instructions.`
+  }
+
+  const startQuiz = async () => {
+    if (!apiKey || !profile?.id) return
+    setMode('quiz')
+    setQuizMessages([])
+    setQuizScore({ correct: 0, total: 0 })
+    setQuizThinking(true)
+    try {
+      const systemPrompt = await buildQuizSystemPrompt()
+      if (!systemPrompt) {
+        const noKnowledge: ChatMessage = { role: 'ai', text: "The mentors haven't added any verified words yet — there's nothing to quiz you on. Check back soon! 📚" }
+        setQuizMessages([noKnowledge])
+        setQuizThinking(false)
+        return
+      }
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Start the quiz.' }
+          ]
+        })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.choices?.[0]) throw new Error(data.error?.message ?? `Groq error ${res.status}`)
+      const aiText: string = data.choices[0].message.content
+      setQuizMessages([{ role: 'ai', text: aiText }])
+    } catch (err) {
+      setQuizMessages([{ role: 'ai', text: 'Could not start the quiz. Please try again.' }])
+    } finally {
+      setQuizThinking(false)
+    }
+  }
+
+  const sendQuizMessage = async (input: string) => {
+    if (!input.trim() || quizThinking || !apiKey) return
+    const userText = input.trim()
+    const updated = [...quizMessages, { role: 'user' as const, text: userText }]
+    setQuizMessages(updated)
+    setQuizThinking(true)
+    try {
+      const systemPrompt = await buildQuizSystemPrompt()
+      if (!systemPrompt) return
+      const groqMessages = [
+        { role: 'system', content: systemPrompt },
+        ...updated.slice(-30).map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text }))
+      ]
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: groqMessages })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.choices?.[0]) throw new Error(data.error?.message ?? `Groq error ${res.status}`)
+      const aiText: string = data.choices[0].message.content
+
+      // Loosely track score from AI feedback
+      const lower = aiText.toLowerCase()
+      if (lower.includes('correct') || lower.includes('well done') || lower.includes('that\'s right') || lower.includes('exactly')) {
+        setQuizScore(prev => ({ correct: prev.correct + 1, total: prev.total + 1 }))
+      } else if (lower.includes('not quite') || lower.includes('actually') || lower.includes('the answer') || lower.includes('wrong')) {
+        setQuizScore(prev => ({ ...prev, total: prev.total + 1 }))
+      }
+
+      setQuizMessages(prev => [...prev, { role: 'ai', text: aiText }])
+    } catch {
+      setQuizMessages(prev => [...prev, { role: 'ai', text: 'Something went wrong. Please try again.' }])
+    } finally {
+      setQuizThinking(false)
+    }
+  }
+
+  const endQuiz = () => {
+    setMode('chat')
+    setQuizMessages([])
+    setQuizScore({ correct: 0, total: 0 })
   }
 
   const startFreshChat = async () => {
@@ -184,16 +286,31 @@ TEACHING APPROACH:
     )
   }
 
+  const quizBtn = (
+    <button className="quiz-toggle-btn" onClick={mode === 'quiz' ? endQuiz : startQuiz} disabled={thinking || quizThinking}>
+      {mode === 'quiz' ? <><MessageCircle size={14} /> Back to Chat</> : <><Zap size={14} /> Quiz Me</>}
+    </button>
+  )
+
   return (
     <div className="page lesson-page">
+      {mode === 'quiz' && (
+        <div className="quiz-score-bar">
+          <span className="quiz-score-label">Quiz in progress</span>
+          <span className="quiz-score-val">
+            {quizScore.correct} / {quizScore.total} correct
+          </span>
+        </div>
+      )}
       <ChatInterface
-        messages={messages}
-        onSendMessage={sendMessage}
-        loading={loading}
-        placeholder="Talk to Alexander..."
-        headerTitle="Alexander"
-        headerSubtitle="Your Kitaveta tutor"
-        showTypingIndicator={thinking}
+        messages={mode === 'quiz' ? quizMessages : messages}
+        onSendMessage={mode === 'quiz' ? sendQuizMessage : sendMessage}
+        loading={mode === 'quiz' ? false : loading}
+        placeholder={mode === 'quiz' ? 'Type your answer...' : 'Talk to Alexander...'}
+        headerTitle={mode === 'quiz' ? '⚡ Quiz Mode' : 'Alexander'}
+        headerSubtitle={mode === 'quiz' ? 'Answer to learn — every mistake teaches' : 'Your Kitaveta tutor'}
+        showTypingIndicator={mode === 'quiz' ? quizThinking : thinking}
+        extraAction={quizBtn}
       />
     </div>
   )
