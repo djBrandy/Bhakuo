@@ -107,7 +107,7 @@ ${knowledgeBlock}`
 
       // 4. Queue gap if AI flagged it
       if (aiText.includes("don't have that word verified")) {
-        await queueKnowledgeGap(userText).catch(() => {})
+        await queueKnowledgeGap(userText, firstName).catch(() => {})
       }
 
       // 5. Play audio for any matching verified word

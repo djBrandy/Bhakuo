@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Page, Profile, ChatMessage } from '../types'
-import { getSyllabus, getLearnerProgress, getChatMessages, saveChatMessage, queueKnowledgeGap } from '../services/database'
+import { getSyllabus, getLearnerProgress, getChatMessages, saveChatMessage, queueKnowledgeGap, getAnsweredGapsForLearner, markGapNotified } from '../services/database'
 import { supabase } from '../services/supabase'
 import { BookOpen } from 'lucide-react'
 import ChatInterface from '../components/ChatInterface'
@@ -25,12 +25,23 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
   const initChat = async () => {
     setLoading(true)
     try {
-      const history = await getChatMessages(profile!.id, 'learner')
+      const [history, answeredGaps] = await Promise.all([
+        getChatMessages(profile!.id, 'learner'),
+        getAnsweredGapsForLearner(profile!.id)
+      ])
+
+      // Inject notifications for newly answered gaps
+      const notifications: { role: 'ai'; text: string }[] = []
+      for (const gap of answeredGaps) {
+        notifications.push({ role: 'ai', text: `✅ Update: ${gap.ai_attempt}! The mentors just added it — ask me about it now.` })
+        await markGapNotified(gap.id).catch(() => {})
+      }
+
       if (history.length > 0) {
-        setMessages(history)
+        setMessages([...history, ...notifications])
       } else {
-        // First time — Alexander opens the conversation
         await startFreshChat()
+        if (notifications.length > 0) setMessages(prev => [...prev, ...notifications])
       }
     } catch (err) {
       console.error(err)

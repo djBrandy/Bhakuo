@@ -255,7 +255,6 @@ export const queueKnowledgeGap = async (question: string, learnerName: string, a
 }
 
 export const notifyLearnersOfAnswer = async (kitaveta: string, english: string) => {
-  // Find open queue items that mention the english word
   const { data: items } = await supabase
     .from('knowledge_queue')
     .select('id, asked_by, question')
@@ -270,27 +269,27 @@ export const notifyLearnersOfAnswer = async (kitaveta: string, english: string) 
 
   if (matched.length === 0) return
 
-  const notification = `✅ Update: "${english}" in Kitaveta is "${kitaveta}"! The mentors just added it — let's continue your lesson.`
-
-  await Promise.all([
-    // Notify each learner in their chat
-    supabase.from('chat_messages').insert(
-      matched
-        .filter((item: any) => item.asked_by)
-        .map((item: any) => ({
-          user_id: item.asked_by,
-          role: 'ai',
-          text: notification,
-          context: 'learner'
-        }))
-    ),
-    // Mark queue items as answered
-    supabase.from('knowledge_queue')
-      .update({ status: 'answered' })
-      .in('id', matched.map((item: any) => item.id))
-  ])
+  // Mark as answered with the resolved kitaveta word — learner chat will pick this up on next load
+  await supabase.from('knowledge_queue')
+    .update({ status: 'answered', ai_attempt: `"${english}" in Kitaveta is "${kitaveta}"` })
+    .in('id', matched.map((item: any) => item.id))
 }
 
+export const getAnsweredGapsForLearner = async (userId: string) => {
+  const { data } = await supabase
+    .from('knowledge_queue')
+    .select('id, ai_attempt')
+    .eq('asked_by', userId)
+    .eq('status', 'answered')
+    .not('ai_attempt', 'is', null)
+  return data ?? []
+}
+
+export const markGapNotified = async (gapId: string) => {
+  await supabase.from('knowledge_queue').update({ status: 'notified' }).eq('id', gapId)
+}
+
+export const getOpenQueue = async () => {
   const { data, error } = await supabase
     .from('knowledge_queue')
     .select('*, profiles(full_name)')
