@@ -136,7 +136,10 @@ TEACHING APPROACH:
       const systemPrompt = await buildSystemPrompt()
       const groqMessages = [
         { role: 'system', content: systemPrompt },
-        ...updatedMessages.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text }))
+        ...updatedMessages
+          .filter(m => !m.text.startsWith('✅'))
+          .slice(-20)
+          .map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text }))
       ]
 
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {

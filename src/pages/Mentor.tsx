@@ -128,6 +128,7 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     try {
       const history = updatedMessages
         .filter(m => !m.text.startsWith('📌'))
+        .slice(-20)
         .map(m => ({
           role: m.role === 'ai' ? 'assistant' : 'user',
           content: m.text
