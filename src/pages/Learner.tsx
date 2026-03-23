@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Page, Profile, ChatMessage } from '../types'
 import { getSyllabus, getLearnerProgress, getChatMessages, saveChatMessage, queueKnowledgeGap } from '../services/database'
+import { supabase } from '../services/supabase'
 import { BookOpen } from 'lucide-react'
 import ChatInterface from '../components/ChatInterface'
 
@@ -39,10 +40,13 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
   }
 
   const buildSystemPrompt = async () => {
-    const [syllabus, progress] = await Promise.all([
+    const [syllabus, progress, knowledgeRes] = await Promise.all([
       getSyllabus(),
-      getLearnerProgress(profile!.id)
+      getLearnerProgress(profile!.id),
+      supabase.from('knowledge').select('kitaveta, english, swahili, expected_response, pronunciation, notes, category, audience, time_of_day, social_context: context').eq('is_verified', true)
     ])
+
+    const knowledge: any[] = knowledgeRes.data ?? []
 
     const completedIds = new Set(
       progress.filter((p: any) => p.status === 'completed').map((p: any) => p.syllabus_id)
@@ -53,26 +57,32 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
 
     const syllabusContext = syllabus.map((l: any) => {
       const status = completedIds.has(l.id) ? '✓ completed' : inProgressIds.has(l.id) ? '→ in progress' : 'not started'
-      return `- Lesson ${l.lesson_number} (Unit ${l.unit}): "${l.title}" [${status}]`
-    }).join('\n')
+      const words = knowledge.filter((k: any) => k.category === l.category)
+      const wordList = words.length
+        ? words.map((k: any) => `  • "${k.kitaveta}" = ${k.english}${k.swahili ? ` / ${k.swahili}` : ''}${k.expected_response ? ` (reply: ${k.expected_response})` : ''}${k.pronunciation ? ` [pron: ${k.pronunciation}]` : ''}`).join('\n')
+        : '  (no verified words yet)'
+      return `Lesson ${l.lesson_number} (Unit ${l.unit}): "${l.title}" [${status}]\n${wordList}`
+    }).join('\n\n')
+
+    const hasAnyKnowledge = knowledge.length > 0
 
     return `You are Alexander, a warm and patient Kitaveta language tutor in a continuous one-on-one conversation with ${firstName}.
 
-CRITICAL RULES:
-- You may ONLY teach Kitaveta words/phrases that exist in the verified knowledge base (fetched per lesson). Never invent or guess Kitaveta.
-- If ${firstName} asks something you cannot verify, say: "I don't have that verified yet — I've asked the mentors to fill that gap for us."
-- This is a continuous conversation — never reset or re-introduce yourself unless it is truly the first message.
-- Pick up naturally from where you left off.
+CRITICAL RULES — NON-NEGOTIABLE:
+- You may ONLY use Kitaveta words and phrases that are explicitly listed below in the VERIFIED KNOWLEDGE BASE.
+- Do NOT invent, guess, or extrapolate any Kitaveta word, phrase, or translation. Not even one.
+- If ${firstName} asks about something not in the list below, say exactly: "I don't have that verified yet — I've asked the mentors to fill that gap for us."
+- This is a continuous conversation — never reset or re-introduce yourself.
+${!hasAnyKnowledge ? '- The knowledge base is currently empty. Tell ' + firstName + ' that the mentors are still adding words and to check back soon. Do not teach anything.' : ''}
 
-SYLLABUS FRAMEWORK (use this to guide what to teach next — it can expand):
+VERIFIED KNOWLEDGE BASE (the ONLY Kitaveta you are allowed to teach):
 ${syllabusContext}
 
 TEACHING APPROACH:
-- Follow the syllabus order loosely — complete earlier lessons before moving to later ones.
-- Teach conversationally: introduce a word/phrase, explain it, use it in context, then quiz ${firstName}.
+- Teach only what is in the verified list above.
+- Introduce a word, explain it, use it in context, then quiz ${firstName}.
 - Keep responses short and mobile-friendly.
-- If ${firstName} wants to jump to a topic, accommodate them.
-- After completing a topic area, naturally transition to the next.`
+- If ${firstName} wants to jump to a topic that has no verified words yet, say you don't have those verified yet.`
   }
 
   const startFreshChat = async () => {
