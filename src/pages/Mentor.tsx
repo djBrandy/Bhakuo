@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type { Page, Profile, Knowledge } from '../types'
 import { ShieldAlert, Save, X, Sparkles } from 'lucide-react'
 import { supabase } from '../services/supabase'
-import { getSyllabus, getChatMessages, saveChatMessage } from '../services/database'
+import { getSyllabus, getChatMessages, saveChatMessage, notifyLearnersOfAnswer } from '../services/database'
 import ChatInterface from '../components/ChatInterface'
 
 interface MentorProps {
@@ -204,8 +204,12 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
       if (error) throw error
 
       const savedKitaveta = pendingEntry.kitaveta!
+      const savedEnglish = pendingEntry.english!
       setTaughtThisSession(prev => [...prev, savedKitaveta])
       setPendingEntry(null)
+
+      // Notify any learners who asked about this word
+      await notifyLearnersOfAnswer(savedKitaveta, savedEnglish).catch(() => {})
 
       // After saving, find the next gap — never repeat what's been taught this session
       const [syllabus, knowledgeRes] = await Promise.all([

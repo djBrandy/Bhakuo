@@ -254,7 +254,43 @@ export const queueKnowledgeGap = async (question: string, learnerName: string, a
   }
 }
 
-export const getOpenQueue = async () => {
+export const notifyLearnersOfAnswer = async (kitaveta: string, english: string) => {
+  // Find open queue items that mention the english word
+  const { data: items } = await supabase
+    .from('knowledge_queue')
+    .select('id, asked_by, question')
+    .eq('status', 'open')
+
+  if (!items || items.length === 0) return
+
+  const matched = items.filter((item: any) =>
+    item.question.toLowerCase().includes(english.toLowerCase()) ||
+    item.question.toLowerCase().includes(kitaveta.toLowerCase())
+  )
+
+  if (matched.length === 0) return
+
+  const notification = `✅ Update: "${english}" in Kitaveta is "${kitaveta}"! The mentors just added it — let's continue your lesson.`
+
+  await Promise.all([
+    // Notify each learner in their chat
+    supabase.from('chat_messages').insert(
+      matched
+        .filter((item: any) => item.asked_by)
+        .map((item: any) => ({
+          user_id: item.asked_by,
+          role: 'ai',
+          text: notification,
+          context: 'learner'
+        }))
+    ),
+    // Mark queue items as answered
+    supabase.from('knowledge_queue')
+      .update({ status: 'answered' })
+      .in('id', matched.map((item: any) => item.id))
+  ])
+}
+
   const { data, error } = await supabase
     .from('knowledge_queue')
     .select('*, profiles(full_name)')
