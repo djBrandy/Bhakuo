@@ -16,7 +16,7 @@ Your job is to fully understand every word or phrase the mentor shares. You coll
 1. The Kitaveta word or phrase
 2. What it means in English
 3. What it means in Swahili (or confirm there is no Swahili equivalent)
-4. The expected response — if someone says this, what do they say back?
+4. The expected response — ONLY ask this if the word/phrase is a greeting or conversational exchange. For standalone vocabulary (nouns, adjectives, verbs, etc.), skip this and use null. Use your judgment: "Chedi" (good) doesn't need a response, but "Wamukaze" (how have you woken) does.
 5. Who can say it — anyone, or only elders / peers / children?
 6. When can it be said — any time of day, or only morning / afternoon / evening?
 7. Any important social context
