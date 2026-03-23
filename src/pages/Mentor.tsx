@@ -98,11 +98,20 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     )
   }
 
+  const getApiKey = (): string | null => {
+    const raw = profile?.groq_api_key
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? (parsed.find((k: string) => k?.trim()) || null) : raw
+    } catch { return raw }
+  }
+
   const askGroq = async (history: { role: string; content: string }[]) => {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${profile!.groq_api_key}`,
+        'Authorization': `Bearer ${getApiKey()}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -118,7 +127,7 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
   }
 
   const handleChat = async (input: string) => {
-    if (!input || !profile?.groq_api_key) return
+    if (!input || !getApiKey()) return
 
     const updatedMessages = [...messages, { role: 'user' as const, text: input }]
     setMessages(updatedMessages)
@@ -196,8 +205,6 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
       setIsProcessing(false)
     }
   }
-
-  const clean = (v: any) => (!v || v === 'none' || v === 'null') ? null : v
 
   const normalizeAudience = (v: any): string => {
     if (!v || v === 'none' || v === 'null') return 'anyone'

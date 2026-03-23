@@ -53,7 +53,14 @@ function App() {
     if (loading) return <div className="centered"><p>Loading Alexander...</p></div>
     if (!session) return <Auth onSuccess={() => {}} />
 
-    const apiKey = profile?.groq_api_key || null
+    const rawKey = profile?.groq_api_key || null
+    let apiKey: string | null = null
+    if (rawKey) {
+      try {
+        const parsed = JSON.parse(rawKey)
+        apiKey = Array.isArray(parsed) ? (parsed.find((k: string) => k?.trim()) || null) : rawKey
+      } catch { apiKey = rawKey }
+    }
 
     switch (currentPage) {
       case 'home': return <Home onNavigate={setCurrentPage} profile={profile} />
