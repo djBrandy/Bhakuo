@@ -10,11 +10,38 @@ interface MentorProps {
   onNavigate: (page: Page) => void
 }
 
+const SYSTEM_PROMPT = `You are Alexander — an eager, curious student of the Kitaveta language, being taught by a native mentor.
+
+Your job is to fully understand every word or phrase the mentor shares. You collect information in this order, asking ONE question at a time:
+1. The Kitaveta word or phrase
+2. What it means in English
+3. What it means in Swahili (or confirm there is no Swahili equivalent)
+4. The expected response — if someone says this, what do they say back?
+5. Who can say it — anyone, or only elders / peers / children?
+6. When can it be said — any time of day, or only morning / afternoon / evening?
+7. Any important social context
+
+Once you have all 7, do THREE things before saving:
+STEP A — Ask: "Is there anything else I should know about this before we save it? Any pronunciation tips, notes, or exceptions?"
+STEP B — After the mentor responds to Step A, do a verification recap in your own words: "Let me make sure I have this right: '[kitaveta]' means '[english]' / '[swahili]', used [time_of_day] by [audience], and the response is '[expected_response]'. [social_context summary]. Is that correct?"
+STEP C — After the mentor confirms the recap, do a short practice exchange. Say: "Just to confirm I've got its essence — let's do a quick practice: [kitaveta phrase]?" Wait for the mentor's reply. When they respond (e.g. with the expected response), acknowledge it warmly with a brief translation (e.g. "[their reply] — [what it means]. I think I've got it!"), then immediately output the JSON.
+Only after completing STEP C, output the JSON.
+
+RULES:
+- Ask exactly ONE question at a time. Never bundle multiple questions.
+- Read the FULL conversation history carefully. NEVER ask for something already provided in this conversation.
+- Be warm, curious, and eager — like a student who genuinely wants to understand deeply.
+- When outputting the entry, respond with ONLY a raw JSON object, no text before or after:
+{"kitaveta": "...", "english": "...", "swahili": "...", "expected_response": "...", "audience": "anyone|elder|peer|child", "time_of_day": "anytime|morning|afternoon|evening", "social_context": "...", "pronunciation": "...", "notes": "..."}
+Use null for any field the mentor confirmed is not applicable.
+- After a save is confirmed, ask: "What OTHER word or phrase should we add?" — never repeat a word already discussed in this conversation.`
+
 const Mentor = ({ profile, onNavigate }: MentorProps) => {
   const [messages, setMessages] = useState<{ role: 'ai' | 'user'; text: string }[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pendingEntry, setPendingEntry] = useState<Partial<Knowledge> | null>(null)
+  const [taughtThisSession, setTaughtThisSession] = useState<string[]>([])
 
   useEffect(() => {
     if (!profile?.id) { setLoading(false); return }
@@ -51,15 +78,29 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     )
   }
 
+  const askGroq = async (history: { role: string; content: string }[]) => {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${profile!.groq_api_key}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history]
+      })
+    })
+    const data = await response.json()
+    return data.choices[0].message.content.trim() as string
+  }
+
   const handleChat = async (input: string) => {
     if (!input || !profile?.groq_api_key) return
 
-    const userText = input
-    const updatedMessages = [...messages, { role: 'user' as const, text: userText }]
+    const updatedMessages = [...messages, { role: 'user' as const, text: input }]
     setMessages(updatedMessages)
     setIsProcessing(true)
-
-    await saveChatMessage(profile.id, 'user', userText, 'mentor').catch(() => {})
+    await saveChatMessage(profile.id, 'user', input, 'mentor').catch(() => {})
 
     try {
       const history = updatedMessages.map(m => ({
@@ -67,26 +108,7 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
         content: m.text
       }))
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${profile.groq_api_key}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            {
-              role: 'system',
-              content: `You are Alexander's Knowledge Assistant helping a Kitaveta mentor document language knowledge.\nRead the full conversation to understand what has been shared so far.\n\n- If you have enough to identify the Kitaveta word/phrase AND at least one translation, extract the entry as a raw JSON object in this exact format (no extra text):\n{"kitaveta": "...", "english": "...", "swahili": "...", "social_context": "..."}\nUse null for any field not provided.\n\n- If you do NOT have enough info yet, reply conversationally in plain text asking for what is missing.`
-            },
-            ...history
-          ]
-        })
-      })
-
-      const data = await response.json()
-      const aiText: string = data.choices[0].message.content.trim()
+      const aiText = await askGroq(history)
 
       if (aiText.startsWith('{')) {
         const structured = JSON.parse(aiText)
@@ -99,7 +121,7 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
         await saveChatMessage(profile.id, 'ai', aiText, 'mentor').catch(() => {})
       }
     } catch (err) {
-      const errMsg = "I had a moment of confusion. Could you repeat that or provide more context?"
+      const errMsg = "I had a moment of confusion. Could you repeat that?"
       setMessages(prev => [...prev, { role: 'ai', text: errMsg }])
     } finally {
       setIsProcessing(false)
@@ -112,18 +134,26 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
     try {
       const [syllabus, knowledgeRes] = await Promise.all([
         getSyllabus(),
-        supabase.from('knowledge').select('category, english').eq('is_verified', true)
+        supabase.from('knowledge').select('category, kitaveta, expected_response').eq('is_verified', true)
       ])
 
-      const coveredCategories = new Set(
-        (knowledgeRes.data ?? []).map((k: any) => k.category)
-      )
+      const knowledge = knowledgeRes.data ?? []
+      const coveredCategories = new Set(knowledge.map((k: any) => k.category))
 
-      const gap = syllabus.find((l: any) => !coveredCategories.has(l.category))
+      // Find first syllabus lesson with no knowledge at all
+      const emptyLesson = syllabus.find((l: any) => !coveredCategories.has(l.category))
 
-      const question = gap
-        ? `For the lesson "${gap.title}" — how do we say "${gap.category}" in Kitaveta?`
-        : `The knowledge base is looking good! Is there anything you'd like to add or correct?`
+      // Or find a lesson that has knowledge but missing expected_response
+      const incompleteEntry = knowledge.find((k: any) => !k.expected_response)
+
+      let question: string
+      if (incompleteEntry) {
+        question = `When someone says "${incompleteEntry.kitaveta}", what do they say back?`
+      } else if (emptyLesson) {
+        question = `For the lesson "${emptyLesson.title}" — what is the first word or phrase we should teach?`
+      } else {
+        question = `The knowledge base is looking strong! Is there anything you'd like to add or refine?`
+      }
 
       setMessages(prev => [...prev, { role: 'ai', text: question }])
       await saveChatMessage(profile!.id, 'ai', question, 'mentor').catch(() => {})
@@ -146,20 +176,47 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
           english: pendingEntry.english,
           swahili: pendingEntry.swahili,
           context: pendingEntry.social_context,
-          category: 'general',
+          expected_response: (pendingEntry as any).expected_response ?? null,
+          pronunciation: (pendingEntry as any).pronunciation ?? null,
+          notes: (pendingEntry as any).notes ?? null,
           formality: 'neutral',
-          audience: 'anyone',
-          time_of_day: 'anytime',
+          audience: (pendingEntry as any).audience ?? 'anyone',
+          time_of_day: (pendingEntry as any).time_of_day ?? 'anytime',
+          category: 'greetings',
           contributor_id: profile.id,
           audio_url: ''
         }])
 
       if (error) throw error
 
-      const successMsg = `"${pendingEntry.kitaveta}" is now part of the bridge. What else shall we teach?`
-      setMessages(prev => [...prev, { role: 'ai', text: successMsg }])
-      await saveChatMessage(profile.id, 'ai', successMsg, 'mentor').catch(() => {})
+      const savedKitaveta = pendingEntry.kitaveta!
+      setTaughtThisSession(prev => [...prev, savedKitaveta])
       setPendingEntry(null)
+
+      // After saving, find the next gap — never repeat what's been taught this session
+      const [syllabus, knowledgeRes] = await Promise.all([
+        getSyllabus(),
+        supabase.from('knowledge').select('category, kitaveta, expected_response').eq('is_verified', true)
+      ])
+
+      const knowledge = knowledgeRes.data ?? []
+      const coveredCategories = new Set(knowledge.map((k: any) => k.category))
+      const emptyLesson = syllabus.find((l: any) => !coveredCategories.has(l.category))
+      const incompleteEntry = knowledge.find(
+        (k: any) => !k.expected_response && !taughtThisSession.includes(k.kitaveta)
+      )
+
+      let nextQuestion: string
+      if (incompleteEntry) {
+        nextQuestion = `"${savedKitaveta}" is now part of the bridge! I noticed "${incompleteEntry.kitaveta}" doesn't have a response yet — when someone says "${incompleteEntry.kitaveta}", what do they say back?`
+      } else if (emptyLesson) {
+        nextQuestion = `"${savedKitaveta}" is now part of the bridge! What other word or phrase should we add for the lesson "${emptyLesson.title}"?`
+      } else {
+        nextQuestion = `"${savedKitaveta}" is now part of the bridge! What other word or phrase shall we preserve today?`
+      }
+
+      setMessages(prev => [...prev, { role: 'ai', text: nextQuestion }])
+      await saveChatMessage(profile.id, 'ai', nextQuestion, 'mentor').catch(() => {})
     } catch (err: any) {
       alert(err.message)
     } finally {
@@ -207,10 +264,28 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
                   <span className="pill-value">{pendingEntry.swahili}</span>
                 </div>
               )}
+              {(pendingEntry as any).expected_response && (
+                <div className="translation-pill">
+                  <span className="pill-lang">↩</span>
+                  <span className="pill-value">{(pendingEntry as any).expected_response}</span>
+                </div>
+              )}
+              {(pendingEntry as any).pronunciation && (
+                <div className="translation-pill">
+                  <span className="pill-lang">PR</span>
+                  <span className="pill-value">{(pendingEntry as any).pronunciation}</span>
+                </div>
+              )}
               {pendingEntry.social_context && (
                 <div className="translation-pill context">
                   <span className="pill-lang">CTX</span>
                   <span className="pill-value">{pendingEntry.social_context}</span>
+                </div>
+              )}
+              {(pendingEntry as any).notes && (
+                <div className="translation-pill context">
+                  <span className="pill-lang">NOTE</span>
+                  <span className="pill-value">{(pendingEntry as any).notes}</span>
                 </div>
               )}
             </div>
