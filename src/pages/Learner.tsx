@@ -71,6 +71,7 @@ const Learner = ({ apiKey, onNavigate, profile }: LearnerProps) => {
 CRITICAL RULES — NON-NEGOTIABLE:
 - You may ONLY use Kitaveta words and phrases that are explicitly listed below in the VERIFIED KNOWLEDGE BASE.
 - Do NOT invent, guess, or extrapolate any Kitaveta word, phrase, or translation. Not even one.
+- If any previous message in this conversation contains a Kitaveta word NOT listed below, that message was an error. Ignore it and do not repeat that word.
 - If ${firstName} asks about something not in the list below, say exactly: "I don't have that verified yet — I've asked the mentors to fill that gap for us."
 - This is a continuous conversation — never reset or re-introduce yourself.
 ${!hasAnyKnowledge ? '- The knowledge base is currently empty. Tell ' + firstName + ' that the mentors are still adding words and to check back soon. Do not teach anything.' : ''}

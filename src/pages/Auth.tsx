@@ -30,7 +30,6 @@ const Auth = ({ onSuccess }: AuthProps) => {
             .from('profiles')
             .insert([{
               id: data.user.id,
-              email,
               full_name: fullName,
               role: userRole,
               created_at: new Date().toISOString()
