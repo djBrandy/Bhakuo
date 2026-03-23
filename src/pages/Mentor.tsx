@@ -111,6 +111,9 @@ const Mentor = ({ profile, onNavigate }: MentorProps) => {
       })
     })
     const data = await response.json()
+    if (!response.ok || !data.choices?.[0]) {
+      throw new Error(data.error?.message ?? `Groq error ${response.status}`)
+    }
     return data.choices[0].message.content.trim() as string
   }
 

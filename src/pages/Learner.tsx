@@ -112,6 +112,7 @@ TEACHING APPROACH:
         })
       })
       const data = await res.json()
+      if (!res.ok || !data.choices?.[0]) throw new Error(data.error?.message ?? `Groq error ${res.status}`)
       const aiText: string = data.choices[0].message.content
       const aiMsg: ChatMessage = { role: 'ai', text: aiText }
       setMessages([aiMsg])
@@ -144,6 +145,7 @@ TEACHING APPROACH:
         body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: groqMessages })
       })
       const data = await res.json()
+      if (!res.ok || !data.choices?.[0]) throw new Error(data.error?.message ?? `Groq error ${res.status}`)
       const aiText: string = data.choices[0].message.content
 
       setMessages(prev => [...prev, { role: 'ai', text: aiText }])
