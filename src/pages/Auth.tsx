@@ -76,7 +76,21 @@ const Auth = ({ onSuccess }: AuthProps) => {
       }
 
       const { error: signInError } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
-      if (signInError) throw signInError
+      if (signInError) {
+        // Check if it's "Invalid login credentials" which could mean no account or wrong password
+        if (signInError.message.toLowerCase().includes('invalid')) {
+          // Try to determine if account exists by checking profiles table
+          // We can't directly check auth, but we can infer from error patterns
+          setError('No account found with that email. Please sign up first.')
+          setTimeout(() => {
+            reset('signup')
+            setEmail(loginEmail)
+          }, 1800)
+          setLoading(false)
+          return
+        }
+        throw signInError
+      }
       onSuccess()
 
     } catch (err: any) {

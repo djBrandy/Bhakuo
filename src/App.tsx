@@ -23,10 +23,19 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [isRecovery, setIsRecovery] = useState(false)
 
-  // Swipe navigation
   const navOrder: Page[] = ['home', 'learner', 'library', 'settings']
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
+  const [slideDir, setSlideDir] = useState<'left' | 'right'>('left')
+  const [pageKey, setPageKey] = useState(0)
+
+  const navigateTo = (page: Page) => {
+    const idx = navOrder.indexOf(currentPage)
+    const newIdx = navOrder.indexOf(page)
+    setSlideDir(newIdx >= idx ? 'left' : 'right')
+    setPageKey(k => k + 1)
+    setCurrentPage(page)
+  }
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
@@ -41,8 +50,16 @@ function App() {
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return
     const idx = navOrder.indexOf(currentPage)
     if (idx === -1) return
-    if (dx < 0 && idx < navOrder.length - 1) setCurrentPage(navOrder[idx + 1])
-    if (dx > 0 && idx > 0) setCurrentPage(navOrder[idx - 1])
+    if (dx < 0 && idx < navOrder.length - 1) {
+      setSlideDir('left')
+      setPageKey(k => k + 1)
+      setCurrentPage(navOrder[idx + 1])
+    }
+    if (dx > 0 && idx > 0) {
+      setSlideDir('right')
+      setPageKey(k => k + 1)
+      setCurrentPage(navOrder[idx - 1])
+    }
   }
 
   useEffect(() => {
@@ -113,14 +130,14 @@ function App() {
     }
 
     switch (currentPage) {
-      case 'home':     return <Home onNavigate={setCurrentPage} profile={profile} />
-      case 'mentor':   return <Mentor profile={profile} onNavigate={setCurrentPage} />
-      case 'learner':  return <Learner profile={profile} apiKey={apiKey} onNavigate={setCurrentPage} />
-      case 'settings': return <Settings profile={profile} onRefresh={() => fetchProfile(session.user.id)} onNavigate={setCurrentPage} />
-      case 'live':     return <LiveSession apiKey={apiKey} onNavigate={setCurrentPage} profile={profile} />
-      case 'library':  return <Library onNavigate={setCurrentPage} />
-      case 'admin':    return <Admin profile={profile} onNavigate={setCurrentPage} />
-      default:         return <Home onNavigate={setCurrentPage} profile={profile} />
+      case 'home':     return <Home onNavigate={navigateTo} profile={profile} />
+      case 'mentor':   return <Mentor profile={profile} onNavigate={navigateTo} />
+      case 'learner':  return <Learner profile={profile} apiKey={apiKey} onNavigate={navigateTo} />
+      case 'settings': return <Settings profile={profile} onRefresh={() => fetchProfile(session.user.id)} onNavigate={navigateTo} />
+      case 'live':     return <LiveSession apiKey={apiKey} onNavigate={navigateTo} profile={profile} />
+      case 'library':  return <Library onNavigate={navigateTo} />
+      case 'admin':    return <Admin profile={profile} onNavigate={navigateTo} />
+      default:         return <Home onNavigate={navigateTo} profile={profile} />
     }
   }
 
@@ -129,14 +146,14 @@ function App() {
       <div className="app-container mobile-pwa" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <Header
           currentPage={currentPage}
-          onNavigate={setCurrentPage}
+          onNavigate={navigateTo}
           session={session}
           profile={profile}
         />
-        <main className="main-content">
+        <main className="main-content" key={pageKey} data-slide={slideDir}>
           {renderPage()}
         </main>
-        {session && <Footer onNavigate={setCurrentPage} />}
+        {session && <Footer onNavigate={navigateTo} />}
       </div>
     </InstallGate>
   )

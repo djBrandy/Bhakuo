@@ -34,10 +34,15 @@ const ChatInterface = ({
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const prevMessageCountRef = useRef(messages.length)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, showTypingIndicator])
+    // Only scroll if message count changed or typing indicator appeared
+    if (messages.length !== prevMessageCountRef.current || showTypingIndicator) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      prevMessageCountRef.current = messages.length
+    }
+  }, [messages.length, showTypingIndicator])
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault()
