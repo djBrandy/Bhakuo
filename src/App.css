@@ -1928,3 +1928,72 @@ body {
   font-weight: 800;
   margin-top: 0.1rem;
 }
+
+/* Home roles */
+.home-roles {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.home-role-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.home-role-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.3rem 0.7rem;
+  border-radius: 2rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.learner-tag {
+  background: rgba(37, 99, 235, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.mentor-tag {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.home-role-desc {
+  font-size: 0.83rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.home-role-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+/* Logout button loading state */
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.logout-btn:hover { color: #f87171; }
+.logout-btn:disabled { opacity: 0.6; cursor: not-allowed; }

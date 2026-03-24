@@ -102,6 +102,19 @@ const Home = ({ onNavigate, profile }: HomeProps) => {
         </p>
       )}
 
+      {/* Roles explanation */}
+      <div className="home-roles">
+        <div className="home-role-row">
+          <span className="home-role-tag learner-tag">📚 Learner</span>
+          <span className="home-role-desc">Anyone can sign up and learn Kitaveta through Alexander. Free, no approval needed.</span>
+        </div>
+        <div className="home-role-divider" />
+        <div className="home-role-row">
+          <span className="home-role-tag mentor-tag">🎓 Mentor</span>
+          <span className="home-role-desc">Native Kitaveta speakers who contribute verified words and phrases. Mentors are approved by an existing verified mentor — not automatic. To apply, go to <button className="home-nudge-link" onClick={() => onNavigate('settings')}>Settings → Request Mentor Access</button>.</span>
+        </div>
+      </div>
+
     </div>
   )
 }

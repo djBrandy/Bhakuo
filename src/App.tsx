@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './services/supabase'
 import Home from './pages/Home'
 import Mentor from './pages/Mentor'
@@ -22,6 +22,28 @@ function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const [loading, setLoading] = useState(true)
   const [isRecovery, setIsRecovery] = useState(false)
+
+  // Swipe navigation
+  const navOrder: Page[] = ['home', 'learner', 'library', 'settings']
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!session) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    // Only trigger if horizontal swipe is dominant and long enough
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    const idx = navOrder.indexOf(currentPage)
+    if (idx === -1) return
+    if (dx < 0 && idx < navOrder.length - 1) setCurrentPage(navOrder[idx + 1])
+    if (dx > 0 && idx > 0) setCurrentPage(navOrder[idx - 1])
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -104,7 +126,7 @@ function App() {
 
   return (
     <InstallGate>
-      <div className="app-container mobile-pwa">
+      <div className="app-container mobile-pwa" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <Header
           currentPage={currentPage}
           onNavigate={setCurrentPage}
@@ -114,7 +136,7 @@ function App() {
         <main className="main-content">
           {renderPage()}
         </main>
-        <Footer onNavigate={setCurrentPage} />
+        {session && <Footer onNavigate={setCurrentPage} />}
       </div>
     </InstallGate>
   )

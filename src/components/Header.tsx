@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import type { Page, Profile } from '../types'
 import { supabase } from '../services/supabase'
-import { Home, BookOpen, GraduationCap, Library, Settings, LogOut, ShieldCheck } from 'lucide-react'
+import { Home, BookOpen, GraduationCap, Library, Settings, LogOut, ShieldCheck, Loader2 } from 'lucide-react'
 
 interface HeaderProps {
   currentPage: Page
@@ -10,8 +11,12 @@ interface HeaderProps {
 }
 
 const Header = ({ currentPage, onNavigate, session, profile }: HeaderProps) => {
+  const [loggingOut, setLoggingOut] = useState(false)
+
   const handleLogout = async () => {
+    setLoggingOut(true)
     await supabase.auth.signOut()
+    setLoggingOut(false)
   }
 
   const isMentor = profile?.role === 'mentor' || profile?.role === 'pending_mentor'
@@ -43,8 +48,8 @@ const Header = ({ currentPage, onNavigate, session, profile }: HeaderProps) => {
               {icon} {label}
             </button>
           ))}
-          <button className="logout-btn" onClick={handleLogout}>
-            <LogOut size={16} /> Logout
+          <button className="logout-btn" onClick={handleLogout} disabled={loggingOut}>
+            {loggingOut ? <><Loader2 size={16} className="spin" /> Logging out…</> : <><LogOut size={16} /> Logout</>}
           </button>
         </nav>
       )}
