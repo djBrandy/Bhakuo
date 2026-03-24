@@ -11,6 +11,7 @@ import Admin from './pages/Admin'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import ResetPassword from './pages/ResetPassword'
+import InstallGate from './components/InstallGate'
 import './App.css'
 
 import type { Page, Profile } from './types'
@@ -102,18 +103,20 @@ function App() {
   }
 
   return (
-    <div className="app-container mobile-pwa">
-      <Header
-        currentPage={currentPage}
-        onNavigate={setCurrentPage}
-        session={session}
-        profile={profile}
-      />
-      <main className="main-content">
-        {renderPage()}
-      </main>
-      <Footer onNavigate={setCurrentPage} />
-    </div>
+    <InstallGate>
+      <div className="app-container mobile-pwa">
+        <Header
+          currentPage={currentPage}
+          onNavigate={setCurrentPage}
+          session={session}
+          profile={profile}
+        />
+        <main className="main-content">
+          {renderPage()}
+        </main>
+        <Footer onNavigate={setCurrentPage} />
+      </div>
+    </InstallGate>
   )
 }
 
