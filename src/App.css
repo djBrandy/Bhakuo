@@ -2020,3 +2020,55 @@ body {
 
 .logout-btn:hover { color: #f87171; }
 .logout-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════
+   GROQ GUIDE — visual step screenshots
+═══════════════════════════════════════════ */
+
+.settings-guide-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.settings-guide-img-toggle {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  width: fit-content;
+  transition: color 0.2s;
+}
+
+.settings-guide-img-toggle:hover { color: #60a5fa; }
+
+.settings-guide-img {
+  width: 100%;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Key validation states */
+.settings-input.key-valid {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.settings-input.key-invalid {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.key-status-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.key-status-icon.valid  { color: #34d399; }
+.key-status-icon.invalid { color: #f87171; }

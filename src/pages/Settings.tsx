@@ -1,7 +1,33 @@
 import { useState, useEffect } from 'react'
 import type { Page, Profile } from '../types'
-import { Key, User, AlertTriangle, Plus, Trash2, Eye, EyeOff, CheckCircle, Lock } from 'lucide-react'
+import { Key, User, AlertTriangle, Plus, Trash2, Eye, EyeOff, CheckCircle, Lock, AlertCircle } from 'lucide-react'
 import { supabase } from '../services/supabase'
+
+// Groq keys are always "gsk_" + 52 base64url chars = 56 chars total
+const isValidGroqKey = (k: string) => /^gsk_[A-Za-z0-9]{52}$/.test(k.trim())
+
+// Import guide images
+import g1 from '../assets/instructions-groq/1.jpeg'
+import g2 from '../assets/instructions-groq/2.jpeg'
+import g3 from '../assets/instructions-groq/3.jpeg'
+import g4 from '../assets/instructions-groq/4.jpeg'
+import g5 from '../assets/instructions-groq/5.jpeg'
+import g6 from '../assets/instructions-groq/6.jpeg'
+import g7 from '../assets/instructions-groq/7.jpeg'
+import g8 from '../assets/instructions-groq/8.jpeg'
+import g9 from '../assets/instructions-groq/9.jpeg'
+
+const GUIDE_STEPS = [
+  { img: g1, caption: 'Go to console.groq.com and click "Continue with Google".' },
+  { img: g2, caption: 'Choose the Gmail account you want to use to sign in to Groq.' },
+  { img: g3, caption: 'Once logged in, tap the three-line menu icon in the top-right corner.' },
+  { img: g4, caption: 'From the menu, press "API Keys".' },
+  { img: g5, caption: 'On the API Keys page, press "Create API Key".' },
+  { img: g6, caption: 'Name it "Alexander", set expiration to "No expiration", then press Submit.' },
+  { img: g7, caption: 'Your key appears — press Copy immediately. It will not be shown again.' },
+  { img: g8, caption: 'Press Done, then close the Groq tab and come back to Alexander.' },
+  { img: g9, caption: 'Paste your key in the field below (as shown), scroll down, and press Save.' },
+]
 
 interface SettingsProps {
   profile: Profile | null
@@ -21,11 +47,12 @@ const parseKeys = (raw: string | null): string[] => {
 }
 
 const Settings = ({ profile, onRefresh }: SettingsProps) => {
-  const [keys, setKeys] = useState<string[]>([''])
+  const [keys, setKeys] = useState<string[]>([""])
   const [displayName, setDisplayName] = useState('')
   const [showKeys, setShowKeys] = useState<boolean[]>([false])
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [guideStep, setGuideStep] = useState<number | null>(null)
 
   // Password change
   const [newPassword, setNewPassword] = useState('')
@@ -216,38 +243,65 @@ const Settings = ({ profile, onRefresh }: SettingsProps) => {
           </p>
         </div>
 
+        {/* Visual step-by-step guide */}
         <div className="settings-guide">
           <p className="settings-guide-title">How to get your free Groq API key — step by step:</p>
           <ol className="settings-steps">
-            <li><span className="step-num">1</span><span>Go to <a href="https://console.groq.com" target="_blank" rel="noreferrer" className="settings-link">console.groq.com</a></span></li>
-            <li><span className="step-num">2</span><span>Click <strong>"Sign Up"</strong> — it's completely free.</span></li>
-            <li><span className="step-num">3</span><span>In the left sidebar click <strong>"API Keys"</strong>.</span></li>
-            <li><span className="step-num">4</span><span>Click <strong>"Create API Key"</strong>. Name it anything (e.g. "Alexander").</span></li>
-            <li><span className="step-num">5</span><span>A key starting with <strong>gsk_</strong> appears. <strong>Copy it immediately</strong> — shown only once.</span></li>
-            <li><span className="step-num">6</span><span>Paste it below and click <strong>"Save Changes"</strong>. Done! 🎉</span></li>
+            {GUIDE_STEPS.map((step, i) => (
+              <li key={i}>
+                <span className="step-num">{i + 1}</span>
+                <div className="settings-guide-step">
+                  <span>{step.caption}</span>
+                  <button
+                    className="settings-guide-img-toggle"
+                    type="button"
+                    onClick={() => setGuideStep(guideStep === i ? null : i)}
+                  >
+                    {guideStep === i ? 'Hide screenshot ▲' : 'Show screenshot ▼'}
+                  </button>
+                  {guideStep === i && (
+                    <img
+                      src={step.img}
+                      alt={`Step ${i + 1}`}
+                      className="settings-guide-img"
+                    />
+                  )}
+                </div>
+              </li>
+            ))}
           </ol>
         </div>
 
         <div className="settings-keys-list">
-          {keys.map((k, i) => (
-            <div key={i} className="settings-key-row">
-              <div className="settings-key-input-wrap">
-                <input
-                  className="settings-input mono"
-                  type={showKeys[i] ? 'text' : 'password'}
-                  value={k}
-                  onChange={e => updateKey(i, e.target.value)}
-                  placeholder="gsk_…"
-                />
-                <button className="settings-key-toggle" onClick={() => toggleShow(i)} type="button">
-                  {showKeys[i] ? <EyeOff size={15} /> : <Eye size={15} />}
+          {keys.map((k, i) => {
+            const trimmed = k.trim()
+            const valid = trimmed === '' ? null : isValidGroqKey(trimmed)
+            return (
+              <div key={i} className="settings-key-row">
+                <div className="settings-key-input-wrap">
+                  <input
+                    className={`settings-input mono${valid === false ? ' key-invalid' : valid === true ? ' key-valid' : ''}`}
+                    type={showKeys[i] ? 'text' : 'password'}
+                    value={k}
+                    onChange={e => updateKey(i, e.target.value)}
+                    placeholder="gsk_…"
+                  />
+                  <button className="settings-key-toggle" onClick={() => toggleShow(i)} type="button">
+                    {showKeys[i] ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {valid === false && (
+                  <span className="key-status-icon invalid"><AlertCircle size={16} /></span>
+                )}
+                {valid === true && (
+                  <span className="key-status-icon valid"><CheckCircle size={16} /></span>
+                )}
+                <button className="settings-key-remove" onClick={() => removeKey(i)} type="button">
+                  <Trash2 size={15} />
                 </button>
               </div>
-              <button className="settings-key-remove" onClick={() => removeKey(i)} type="button">
-                <Trash2 size={15} />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {keys.length < MAX_KEYS && (
