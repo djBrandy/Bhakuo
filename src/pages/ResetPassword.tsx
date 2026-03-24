@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { supabase } from '../services/supabase'
 import { Eye, EyeOff, CheckCircle } from 'lucide-react'
 
-const ResetPassword = () => {
+interface ResetPasswordProps {
+  onDone?: () => void
+}
+
+const ResetPassword = ({ onDone }: ResetPasswordProps) => {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -21,8 +25,6 @@ const ResetPassword = () => {
     if (error) { setError(error.message); setLoading(false); return }
     setDone(true)
     setLoading(false)
-    // Clean the URL
-    window.history.replaceState({}, '', '/')
   }
 
   if (done) {
@@ -31,8 +33,11 @@ const ResetPassword = () => {
         <div className="auth-container card" style={{ textAlign: 'center', gap: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <CheckCircle size={48} color="var(--accent)" />
           <h1>Password Updated!</h1>
-          <p style={{ color: 'var(--muted)' }}>Your password has been changed. You can now use it to log in.</p>
-          <button className="primary-btn" onClick={() => window.location.href = '/'}>
+          <p style={{ color: 'var(--muted)' }}>Your password has been changed successfully.</p>
+          <button className="primary-btn" onClick={() => {
+            if (onDone) onDone()
+            else window.location.href = '/'
+          }}>
             Continue to Alexander
           </button>
         </div>

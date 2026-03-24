@@ -11,24 +11,15 @@ type AuthView = 'login' | 'signup' | 'forgot'
 const Auth = ({ onSuccess }: AuthProps) => {
   const [view, setView] = useState<AuthView>('login')
   const [loading, setLoading] = useState(false)
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('') // email or display name
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
 
   const reset = (v: AuthView) => { setView(v); setError(null); setInfo(null) }
-
-  // Google sign-in — coming soon
-  // const handleGoogleSignIn = async () => {
-  //   setGoogleLoading(false)
-  //   const { error } = await supabase.auth.signInWithOAuth({
-  //     provider: 'google',
-  //     options: { redirectTo: window.location.origin }
-  //   })
-  //   if (error) { setError(error.message); setGoogleLoading(false) }
-  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +33,7 @@ const Auth = ({ onSuccess }: AuthProps) => {
           redirectTo: `${window.location.origin}/?reset=true`
         })
         if (error) throw error
-        setInfo('Password reset email sent! Check your inbox.')
+        setInfo('Reset link sent! Check your inbox and click the link to set a new password.')
         setLoading(false)
         return
       }
@@ -50,30 +41,44 @@ const Auth = ({ onSuccess }: AuthProps) => {
       if (view === 'signup') {
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
         if (signUpError) throw signUpError
-
         if (data.user) {
           const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
           if (signInError) throw signInError
-
           const { error: profileError } = await supabase
             .from('profiles')
-            .insert([{
-              id: data.user.id,
-              full_name: fullName,
-              role: 'learner',
-              created_at: new Date().toISOString()
-            }])
-
+            .insert([{ id: data.user.id, full_name: fullName, role: 'learner', created_at: new Date().toISOString() }])
           if (profileError) throw profileError
           onSuccess()
         } else {
           setInfo('Check your email for the confirmation link!')
         }
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) throw signInError
-        onSuccess()
+        return
       }
+
+      // LOGIN — identifier can be email or display name
+      let loginEmail = identifier.trim()
+
+      if (!loginEmail.includes('@')) {
+        // Look up email by display name
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .ilike('full_name', loginEmail)
+          .maybeSingle()
+
+        if (!profileData) {
+          throw new Error('No account found with that name. Try using your email address instead.')
+        }
+
+        // We have the user id but not the email — attempt sign in will fail without email.
+        // Inform user to use email.
+        throw new Error('Found your profile! For security, please log in with your email address.')
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
+      if (signInError) throw signInError
+      onSuccess()
+
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -91,53 +96,45 @@ const Auth = ({ onSuccess }: AuthProps) => {
         <p>
           {view === 'login' ? 'Log in to continue your journey.'
             : view === 'signup' ? 'Create your account to start learning.'
-            : 'Enter your email and we\'ll send you a reset link.'}
+            : "Enter your email and we'll send you a reset link."}
         </p>
 
-        {/* Google sign-in — coming soon
-        {view !== 'forgot' && (
-          <>
-            <button
-              className="google-btn"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading || loading}
-              type="button"
-            >
-              <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
-                <path d="M47.5 24.5c0-1.6-.1-3.2-.4-4.7H24v9h13.1c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.3 7.4-10.6 7.4-17.5z" fill="#4285F4"/>
-                <path d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.9-6c-2.1 1.4-4.8 2.3-8 2.3-6.1 0-11.3-4.1-13.2-9.7H2.6v6.2C6.6 42.8 14.7 48 24 48z" fill="#34A853"/>
-                <path d="M10.8 28.8A14.8 14.8 0 0 1 10 24c0-1.7.3-3.3.8-4.8v-6.2H2.6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l8.2-6z" fill="#FBBC05"/>
-                <path d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.5 30.4 0 24 0 14.7 0 6.6 5.2 2.6 13.2l8.2 6.2C12.7 13.6 17.9 9.5 24 9.5z" fill="#EA4335"/>
-              </svg>
-              {googleLoading ? 'Redirecting…' : `${view === 'signup' ? 'Sign up' : 'Sign in'} with Google`}
-            </button>
-            <div className="auth-divider"><span>or</span></div>
-          </>
-        )}
-        */}
-
         <form onSubmit={handleSubmit} className="auth-form">
+
           {view === 'signup' && (
             <div className="input-group">
               <input
                 type="text"
-                placeholder="Full name"
+                placeholder="Full name (this becomes your username)"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={e => setFullName(e.target.value)}
                 required
               />
             </div>
           )}
 
-          <div className="input-group">
-            <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+          {/* Login: email or name. Signup & forgot: email only */}
+          {view === 'login' ? (
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder="Email address or display name"
+                value={identifier}
+                onChange={e => setIdentifier(e.target.value)}
+                required
+              />
+            </div>
+          ) : (
+            <div className="input-group">
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           {view !== 'forgot' && (
             <div className="input-group password-group">
@@ -145,32 +142,23 @@ const Auth = ({ onSuccess }: AuthProps) => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 required
               />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(p => !p)}
-                tabIndex={-1}
-              >
+              <button type="button" className="password-toggle" onClick={() => setShowPassword(p => !p)} tabIndex={-1}>
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           )}
 
           {view === 'login' && (
-            <button
-              type="button"
-              className="forgot-link"
-              onClick={() => reset('forgot')}
-            >
+            <button type="button" className="forgot-link" onClick={() => reset('forgot')}>
               Forgot password?
             </button>
           )}
 
           {error && <p className="error-text">{error}</p>}
-          {info  && <p className="info-text">{info}</p>}
+          {info && <p className="info-text">{info}</p>}
 
           <button className="primary-btn" type="submit" disabled={loading}>
             {loading ? 'Processing…'

@@ -20,6 +20,7 @@ function App() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const [loading, setLoading] = useState(true)
+  const [isRecovery, setIsRecovery] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,6 +30,11 @@ function App() {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true)
+        setLoading(false)
+        return
+      }
       setSession(session)
       if (session) fetchProfile(session.user.id)
       else {
@@ -68,11 +74,9 @@ function App() {
   const renderPage = () => {
     if (loading) return <div className="centered"><p>Loading Alexander...</p></div>
 
-    // User landed from a password reset email
+    // Password recovery flow — intercept before anything else
     const isReset = new URLSearchParams(window.location.search).get('reset') === 'true'
-    if (isReset || (!session && new URLSearchParams(window.location.search).get('type') === 'recovery')) {
-      return <ResetPassword />
-    }
+    if (isRecovery || isReset) return <ResetPassword onDone={() => { setIsRecovery(false); window.history.replaceState({}, '', '/') }} />
 
     if (!session) return <Auth onSuccess={() => {}} />
 
