@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from './services/supabase'
 import Home from './pages/Home'
 import Mentor from './pages/Mentor'
@@ -16,12 +16,17 @@ import './App.css'
 
 import type { Page, Profile } from './types'
 
+const INACTIVITY_MS = 10 * 60 * 1000 // 10 minutes
+
 function App() {
   const [session, setSession] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const [loading, setLoading] = useState(true)
   const [isRecovery, setIsRecovery] = useState(false)
+  const [exitConfirm, setExitConfirm] = useState(false)
+  const exitConfirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const navOrder: Page[] = ['home', 'learner', 'library', 'settings']
   const touchStartX = useRef(0)
@@ -36,6 +41,44 @@ function App() {
     setPageKey(k => k + 1)
     setCurrentPage(page)
   }
+
+  // ── Back button: press once = warn, press again within 2s = exit ──
+  useEffect(() => {
+    const handleBack = (e: PopStateEvent) => {
+      e.preventDefault()
+      window.history.pushState(null, '', window.location.href)
+      if (exitConfirm) {
+        // Second press — actually exit (close PWA / go back)
+        if (exitConfirmTimer.current) clearTimeout(exitConfirmTimer.current)
+        window.history.go(-2)
+        return
+      }
+      setExitConfirm(true)
+      exitConfirmTimer.current = setTimeout(() => setExitConfirm(false), 2000)
+    }
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handleBack)
+    return () => window.removeEventListener('popstate', handleBack)
+  }, [exitConfirm])
+
+  // ── Inactivity auto-logout ──
+  const resetInactivity = useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    inactivityTimer.current = setTimeout(() => {
+      supabase.auth.signOut()
+    }, INACTIVITY_MS)
+  }, [])
+
+  useEffect(() => {
+    if (!session) return
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll']
+    events.forEach(ev => window.addEventListener(ev, resetInactivity, { passive: true }))
+    resetInactivity()
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, resetInactivity))
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    }
+  }, [session, resetInactivity])
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
@@ -154,6 +197,9 @@ function App() {
           {renderPage()}
         </main>
         {session && <Footer onNavigate={navigateTo} />}
+        {exitConfirm && (
+          <div className="exit-toast">Press back again to exit</div>
+        )}
       </div>
     </InstallGate>
   )
