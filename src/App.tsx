@@ -10,6 +10,7 @@ import Library from './pages/Library'
 import Admin from './pages/Admin'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import ResetPassword from './pages/ResetPassword'
 import './App.css'
 
 import type { Page, Profile } from './types'
@@ -66,6 +67,13 @@ function App() {
 
   const renderPage = () => {
     if (loading) return <div className="centered"><p>Loading Alexander...</p></div>
+
+    // User landed from a password reset email
+    const isReset = new URLSearchParams(window.location.search).get('reset') === 'true'
+    if (isReset || (!session && new URLSearchParams(window.location.search).get('type') === 'recovery')) {
+      return <ResetPassword />
+    }
+
     if (!session) return <Auth onSuccess={() => {}} />
 
     const rawKey = profile?.groq_api_key || null
