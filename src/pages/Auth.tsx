@@ -11,7 +11,6 @@ type AuthView = 'login' | 'signup' | 'forgot'
 const Auth = ({ onSuccess }: AuthProps) => {
   const [view, setView] = useState<AuthView>('login')
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -21,16 +20,15 @@ const Auth = ({ onSuccess }: AuthProps) => {
 
   const reset = (v: AuthView) => { setView(v); setError(null); setInfo(null) }
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true)
-    setError(null)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin }
-    })
-    if (error) { setError(error.message); setGoogleLoading(false) }
-    // on success the page redirects — no further action needed
-  }
+  // Google sign-in — coming soon
+  // const handleGoogleSignIn = async () => {
+  //   setGoogleLoading(false)
+  //   const { error } = await supabase.auth.signInWithOAuth({
+  //     provider: 'google',
+  //     options: { redirectTo: window.location.origin }
+  //   })
+  //   if (error) { setError(error.message); setGoogleLoading(false) }
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,7 +94,7 @@ const Auth = ({ onSuccess }: AuthProps) => {
             : 'Enter your email and we\'ll send you a reset link.'}
         </p>
 
-        {/* Google button — not shown on forgot password */}
+        {/* Google sign-in — coming soon
         {view !== 'forgot' && (
           <>
             <button
@@ -113,12 +111,10 @@ const Auth = ({ onSuccess }: AuthProps) => {
               </svg>
               {googleLoading ? 'Redirecting…' : `${view === 'signup' ? 'Sign up' : 'Sign in'} with Google`}
             </button>
-
-            <div className="auth-divider">
-              <span>or</span>
-            </div>
+            <div className="auth-divider"><span>or</span></div>
           </>
         )}
+        */}
 
         <form onSubmit={handleSubmit} className="auth-form">
           {view === 'signup' && (
